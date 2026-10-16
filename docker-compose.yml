@@ -1,0 +1,41 @@
+# EMPORION. Build context is the monorepo root (oracle-core is copied in):
+#     docker compose -f emporion/docker-compose.yml up -d --build
+# Loopback only; nginx publishes it (deploy: scripts/deploy_emporion.sh).
+services:
+  emporion:
+    build:
+      context: ..
+      dockerfile: emporion/Dockerfile
+      target: runtime
+    image: emporion:latest
+    container_name: emporion
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9351:9351"
+    environment:
+      EMPORION_PUBLIC_URL: ${EMPORION_PUBLIC_URL:-https://modelmarket.dev/providers/emporion}
+      EMPORION_CORS_ORIGINS: ${EMPORION_CORS_ORIGINS:-}
+      EMPORION_RATE_LIMIT: ${EMPORION_RATE_LIMIT:-120}
+      # Hybrid ML-DSA-65 alongside Ed25519, as the oracle family and GAIA sign.
+      ORACLE_PQC: ${ORACLE_PQC:-1}
+      # The price gate (oracles/core/oracle_core/price_gate.py): priced capabilities answer
+      # only a call a hub in ORACLE_TRUSTED_HUBS ("url=ed25519 key,…") signed, or 402. Empty
+      # leaves it off, as before. ORACLE_PRICE_GATE=report logs what it would refuse first.
+      ORACLE_TRUSTED_HUBS: ${ORACLE_TRUSTED_HUBS:-}
+      ORACLE_PRICE_GATE: ${ORACLE_PRICE_GATE:-}
+      ORACLE_HUB_AUDIENCES: ${ORACLE_HUB_AUDIENCES:-}
+      # The call log (oracle_core.calls): every invoke written down, SQLite in /data unless
+      # ORACLE_DATABASE_URL names Postgres; the operator reads it at /ops/v1/* with
+      # ORACLE_OPS_TOKEN (the routes answer 503 without one). Secrets come from the env file.
+      ORACLE_CALLS: ${ORACLE_CALLS:-1}
+      ORACLE_DATA_DIR: /data
+      ORACLE_DATABASE_URL: ${ORACLE_DATABASE_URL:-}
+      ORACLE_OPS_TOKEN: ${ORACLE_OPS_TOKEN:-}
+      ORACLE_CALLS_RETENTION_DAYS: ${ORACLE_CALLS_RETENTION_DAYS:-90}
+    volumes:
+      - emporion_data:/data
+    # Parsing the EU list (25 MB XML) peaks near 250 MB; leave headroom, cap the rest.
+    mem_limit: 768m
+
+volumes:
+  emporion_data:

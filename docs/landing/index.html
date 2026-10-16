@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EMPORION — public-record facts for agents that trade</title>
+<meta name="description" content="EU VAT validity, legal entities, ECB rates, sanctions lists and Bitcoin timestamps for AI agents — every answer signed with its source, the fetch time and the SHA-256 of what the source returned." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="EMPORION — public-record facts for agents that trade" />
+<meta property="og:description" content="VIES, GLEIF, ECB, OFAC/EU/UN sanctions and OpenTimestamps as signed AIMarket capabilities." />
+<meta property="og:url" content="https://emporion.modelmarket.dev/" />
+<link rel="canonical" href="https://emporion.modelmarket.dev/" />
+<link href="fonts/fonts.css" rel="stylesheet" />
+<style>
+  :root {
+    --void: #0e0b07;
+    --ink: #f4ede1;
+    --muted: #c4b59b;
+    --faint: #8c7d63;
+    --bronze: #d9a441;
+    --sea: #4fb8ad;
+    --wine: #b4584a;
+    --panel: rgba(30, 22, 12, 0.55);
+    --brd: rgba(217, 164, 65, 0.22);
+    --head: "Syne", system-ui, sans-serif;
+    --body: "DM Sans", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --maxw: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--void); color: var(--ink);
+    font-family: var(--body); font-size: 17px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  .sky {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(55vw 45vw at 78% 6%, rgba(217, 164, 65, 0.15), transparent 58%),
+      radial-gradient(48vw 40vw at 8% 82%, rgba(79, 184, 173, 0.12), transparent 55%),
+      radial-gradient(70vw 50vw at 50% 100%, rgba(180, 88, 74, 0.08), transparent 50%),
+      linear-gradient(180deg, #0b0905, #0e0b07 40%, #15100a);
+  }
+  /* A struck coin: the trading post's seal. */
+  .coin {
+    position: fixed; right: -6vw; top: 14vh; width: min(46vw, 460px); height: min(46vw, 460px);
+    border-radius: 50%; z-index: 0; pointer-events: none; opacity: 0.5;
+    background:
+      radial-gradient(circle at 34% 30%, rgba(255, 236, 190, 0.38), transparent 30%),
+      radial-gradient(circle, #8a6420 0%, #5c3f12 55%, #2a1c08 74%, transparent 75%),
+      repeating-conic-gradient(from 0deg, rgba(255, 220, 150, 0.22) 0deg 2deg, transparent 2deg 6deg);
+    box-shadow: inset -30px -24px 70px rgba(0,0,0,0.55), 0 0 90px rgba(217, 164, 65, 0.12);
+    animation: turn 40s linear infinite;
+  }
+  .coin::after {
+    content: ""; position: absolute; inset: 14%; border-radius: 50%;
+    border: 2px solid rgba(255, 226, 160, 0.28);
+  }
+  @keyframes turn { to { transform: rotate(360deg); } }
+  body.has-3d .coin { display: none; }
+  main { position: relative; }
+  #agora {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100vh; min-height: 560px;
+    z-index: 1; display: block;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 34%, rgba(0,0,0,0.5) 48%, #000 64%);
+            mask-image: linear-gradient(90deg, transparent 0%, transparent 34%, rgba(0,0,0,0.5) 48%, #000 64%);
+  }
+  .agora-fade {
+    position: absolute; left: 0; right: 0; top: calc(100vh - 160px); height: 160px; z-index: 1;
+    pointer-events: none; background: linear-gradient(180deg, transparent, var(--void));
+  }
+  .scene-badge {
+    /* main starts under the 64 px bar: 100vh from its top would sit below the fold. */
+    position: absolute; z-index: 3; right: 22px; top: calc(100vh - 64px - 52px);
+    display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 44px);
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--brd);
+    background: rgba(14, 11, 7, 0.72); color: var(--faint); font-size: 12px; letter-spacing: 0.02em;
+  }
+  .scene-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
+  .scene-badge.live { color: var(--muted); }
+  .scene-badge.live .dot { background: #5fd38d; box-shadow: 0 0 10px rgba(95, 211, 141, 0.8); }
+  @media (prefers-reduced-motion: reduce) { .coin, .brand .seal { animation: none; } }
+  .wrap { position: relative; z-index: 2; max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, rgba(14,11,7,0.94), rgba(14,11,7,0.5));
+    border-bottom: 1px solid var(--brd);
+  }
+  nav .row {
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 64px; gap: 14px; flex-wrap: wrap; padding: 8px 22px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    font-family: var(--head); font-weight: 800; letter-spacing: 0.18em; font-size: 15px;
+    text-decoration: none; color: var(--ink);
+  }
+  .brand .seal {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff0c8, var(--bronze) 45%, #6b4a14);
+    box-shadow: 0 0 16px rgba(217, 164, 65, 0.55);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  .nav-links { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .nav-links a:hover { color: var(--bronze); }
+  .nav-cta {
+    color: #1c1305 !important; background: linear-gradient(100deg, var(--bronze), #f0c878);
+    padding: 8px 14px; border-radius: 8px;
+  }
+  .langsw { display: inline-flex; gap: 2px; border: 1px solid var(--brd); border-radius: 999px; padding: 3px; background: rgba(217, 164, 65, 0.06); }
+  .langsw button { background: none; border: 0; color: var(--muted); font: 600 12px/1 var(--body); letter-spacing: 0.08em; padding: 5px 9px; border-radius: 999px; cursor: pointer; }
+  .langsw button.on { background: rgba(217, 164, 65, 0.18); color: var(--bronze); }
+
+  .hero {
+    min-height: calc(100vh - 64px);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 48px 22px 72px;
+  }
+  .hero-in { max-width: 660px; }
+  .hero h1 {
+    font-family: var(--head); font-weight: 800; font-size: clamp(30px, 9vw, 86px);
+    letter-spacing: -0.03em; line-height: 0.95; margin: 0 0 14px;
+  }
+  .hero h1 span { color: var(--bronze); }
+  .hero .greek { color: var(--faint); font-size: 14px; letter-spacing: 0.06em; margin: 0 0 22px; }
+  .hero p { margin: 0 0 28px; color: var(--muted); font-size: 18px; max-width: 36em; }
+  .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary {
+    color: #1c1305; background: linear-gradient(100deg, var(--bronze), #f0c878);
+    box-shadow: 0 8px 28px rgba(217, 164, 65, 0.25);
+  }
+  .btn-ghost { color: var(--ink); border: 1px solid var(--brd); background: rgba(30, 22, 12, 0.45); }
+
+  section { padding: 72px 0; border-top: 1px solid var(--brd); }
+  section h2 { font-family: var(--head); font-size: clamp(26px, 4vw, 36px); margin: 0 0 10px; letter-spacing: -0.02em; }
+  section .lead { color: var(--muted); margin: 0 0 28px; max-width: 42em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 18px; }
+  .item h3 { font-family: var(--head); font-size: 16px; margin: 0 0 8px; letter-spacing: 0.04em; color: var(--sea); }
+  .item p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .caps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; }
+  .cap { border: 1px solid var(--brd); border-radius: 12px; padding: 16px 18px; background: var(--panel); }
+  .cap .top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .cap code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+  .cap .price { font-family: var(--mono); font-size: 13px; color: var(--bronze); white-space: nowrap; }
+  .cap p { margin: 8px 0 6px; color: var(--muted); font-size: 15px; }
+  .cap .src { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+
+  pre {
+    margin: 0 0 18px; padding: 16px 18px; border-radius: 12px; overflow-x: auto;
+    background: rgba(8, 6, 3, 0.75); border: 1px solid var(--brd);
+    font: 13px/1.6 var(--mono); color: #eadfca;
+  }
+  pre .c { color: var(--faint); }
+  ul.limits { margin: 0; padding-left: 20px; color: var(--muted); }
+  ul.limits li { margin: 0 0 8px; }
+
+  footer {
+    padding: 36px 0 48px; border-top: 1px solid var(--brd);
+    color: var(--faint); font-size: 13px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 860px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+  }
+  /* On a phone the hero's own button is one thumb away: keep the sticky bar to one row. */
+  @media (max-width: 520px) {
+    .nav-links .nav-cta { display: none; }
+  }
+  @media (max-width: 720px) {
+    #agora { -webkit-mask-image: none; mask-image: none; opacity: 0.32; }
+    .scene-badge { top: auto; bottom: auto; position: relative; right: auto; margin: 0 22px 18px; }
+    .coin { opacity: 0.25; right: -24vw; top: 6vh; }
+    .hero { min-height: auto; padding-top: 56px; }
+  }
+</style>
+</head>
+<body>
+  <div class="sky" aria-hidden="true"></div>
+  <div class="coin" aria-hidden="true"></div>
+
+  <nav>
+    <div class="wrap row">
+      <a class="brand" href="#top"><span class="seal" aria-hidden="true"></span>EMPORION</a>
+      <div class="nav-links">
+        <a href="#caps" data-i18n="nav_caps">Capabilities</a>
+        <a href="#trust" data-i18n="nav_trust">Trust</a>
+        <a href="#call" data-i18n="nav_call">Call it</a>
+        <a href="https://github.com/alexar76/emporion" data-i18n="nav_source">Source</a>
+        <a class="nav-cta" href="https://emporion.modelmarket.dev/ai-market/v2/manifest" data-i18n="nav_live">Live service</a>
+        <span class="langsw" aria-label="Language">
+          <button type="button" data-lang="en">EN</button><button type="button" data-lang="ru">RU</button><button type="button" data-lang="es">ES</button><button type="button" data-lang="fr">FR</button><button type="button" data-lang="zh">ZH</button>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <canvas id="agora" aria-hidden="true"></canvas>
+    <div class="agora-fade" aria-hidden="true"></div>
+    <div class="scene-badge" id="scene-badge" hidden><span class="dot" aria-hidden="true"></span><span data-i18n="scene_sim">Illustration: no live lists from the service right now</span><span id="scene-detail"></span></div>
+    <div class="wrap hero"><div class="hero-in">
+      <h1>EMPORION<span>.</span></h1>
+      <p class="greek" data-i18n="greek">ἐμπόριον — the trading post where traders met and settled</p>
+      <p data-i18n="hero_p">Public-record facts for agents that trade: EU VAT, legal entities, ECB rates, sanctions lists and Bitcoin timestamps — every answer signed with its source, the fetch time and the SHA-256 of what the source returned.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://emporion.modelmarket.dev/ai-market/v2/manifest" data-i18n="cta_live">Open the live service</a>
+        <a class="btn btn-ghost" href="https://github.com/alexar76/emporion" data-i18n="cta_github">View on GitHub</a>
+        <a class="btn btn-ghost" href="https://modelmarket.dev/" data-i18n="cta_hub">Buy through modelmarket.dev</a>
+      </div>
+    </div></div>
+
+    <section id="what">
+      <div class="wrap">
+        <h2 data-i18n="what_h2">Facts no model can make up</h2>
+        <p class="lead" data-i18n="what_lead">An agent that buys, sells or pays has to know: is this VAT number valid, who is this company, what was the euro rate that day, is this wallet on a sanctions list, did this document exist yesterday. EMPORION answers from the public record and says exactly where each answer came from.</p>
+      </div>
+    </section>
+
+    <section id="caps">
+      <div class="wrap">
+        <h2 data-i18n="caps_h2">Seven capabilities</h2>
+        <p class="lead" data-i18n="caps_lead">Sold per call through the AIMarket hub. A source that cannot answer is a refusal, and a refusal costs nothing.</p>
+        <div class="caps">
+          <div class="cap"><div class="top"><code>emporion.vat.check@v1</code><span class="price">$0.002</span></div>
+            <p data-i18n="c1">Is this EU VAT number valid today? Name, address — and, with your own VAT number as requester, the VIES consultation number: official proof of the check.</p>
+            <div class="src">EU VIES</div></div>
+          <div class="cap"><div class="top"><code>emporion.lei.lookup@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c2">Who is this legal entity? By LEI or by name: legal name, jurisdiction, status, addresses, direct and ultimate parents.</p>
+            <div class="src">GLEIF · CC0</div></div>
+          <div class="cap"><div class="top"><code>emporion.fx.rate@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c3">The euro reference rate for any pair on any date since 1999, and the ECB day it is from.</p>
+            <div class="src">ECB</div></div>
+          <div class="cap"><div class="top"><code>emporion.sanctions.screen@v1</code><span class="price">$0.002</span></div>
+            <p data-i18n="c4">Is this wallet address or name on a public sanctions list? OFAC SDN with digital-currency addresses, the EU and UN lists — each with its date and SHA-256.</p>
+            <div class="src">OFAC · EU · UN</div></div>
+          <div class="cap"><div class="top"><code>emporion.timestamp.stamp@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c5">Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; you get a standard .ots proof.</p>
+            <div class="src">OpenTimestamps</div></div>
+          <div class="cap"><div class="top"><code>emporion.timestamp.verify@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c6">Verify a proof: confirmed only when two independent explorers agree on the Bitcoin block it lands in.</p>
+            <div class="src">Bitcoin</div></div>
+          <div class="cap"><div class="top"><code>emporion.sources@v1</code><span class="price" data-i18n="free">free</span></div>
+            <p data-i18n="c7">Every source's licence and attribution, and which sanctions lists are held right now.</p>
+            <div class="src">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="trust">
+      <div class="wrap">
+        <h2 data-i18n="trust_h2">Why an agent can rely on it</h2>
+        <div class="grid">
+          <div class="item"><h3 data-i18n="t1_t">Source in every answer</h3>
+            <p data-i18n="t1_d">Where it came from, when it was fetched, and the SHA-256 of the source's own reply, with the licence and attribution.</p></div>
+          <div class="item"><h3 data-i18n="t2_t">Signed and bound</h3>
+            <p data-i18n="t2_d">An Ed25519 signature over the answer and the request it answers — the hub checks it before the buyer pays.</p></div>
+          <div class="item"><h3 data-i18n="t3_t">Only listed hosts</h3>
+            <p data-i18n="t3_d">HTTPS to each source's exact hosts, redirects checked by hand, every body size-capped, XML parsed defused.</p></div>
+          <div class="item"><h3 data-i18n="t4_t">Honest refusals</h3>
+            <p data-i18n="t4_d">A sanctions list older than 48 hours or a silent registry is a refusal that costs nothing — never an empty "not listed".</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="call">
+      <div class="wrap">
+        <h2 data-i18n="call_h2">Call it</h2>
+        <p class="lead" data-i18n="call_lead">Through the hub — five free trial calls an hour — or run your own copy from the repository.</p>
+<pre><span class="c"># check a VAT number through modelmarket.dev (a free trial call)</span>
+curl -s https://modelmarket.dev/ai-market/v2/invoke \
+  -H 'Content-Type: application/json' \
+  -H 'X-AIMarket-Sandbox-Visitor: my-agent-01' \
+  -d '{"product_id":"emporion","capability_id":"emporion.vat.check@v1",
+       "source_hub":"https://modelmarket.dev/providers/emporion",
+       "input":{"vat":"IE6388047V"}}'</pre>
+<pre><span class="c"># or run your own</span>
+git clone https://github.com/alexar76/emporion.git &amp;&amp; cd emporion
+docker build -f Dockerfile.standalone -t emporion .
+docker run -d -p 127.0.0.1:9351:9351 -v emporion-data:/data emporion
+curl -s http://127.0.0.1:9351/ai-market/v2/manifest</pre>
+      </div>
+    </section>
+
+    <section id="limits">
+      <div class="wrap">
+        <h2 data-i18n="limits_h2">Honest limits</h2>
+        <ul class="limits">
+          <li data-i18n="l1">VIES answers what the member state's registry answers at that moment; some states return no name or address. EMPORION stores nothing.</li>
+          <li data-i18n="l2">GLEIF covers entities that have an LEI — many small companies do not.</li>
+          <li data-i18n="l3">Reference rates are for information, not dealing.</li>
+          <li data-i18n="l4">Sanctions screening is a lookup in three public lists, not legal advice or a compliance programme.</li>
+          <li data-i18n="l5">A timestamp proves existence no later than a block's time, not authorship.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <span data-i18n="foot_eco">EMPORION · AICOM / AIMarket ecosystem · MIT</span>
+    <span>
+      <a href="https://emporion.modelmarket.dev/">emporion.modelmarket.dev</a>
+      ·
+      <a href="https://github.com/alexar76/emporion/blob/main/CHANGELOG.md" data-i18n="foot_changes">Changelog</a>
+    </span>
+  </footer>
+
+<script src="assets/landing.js"></script>
+<script type="module" src="assets/hero.js"></script>
+</body>
+</html>
