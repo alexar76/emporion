@@ -65,6 +65,9 @@ jobs:
             curl -sf http://127.0.0.1:9351/health && break
             sleep 2
           done
+          curl -sf -o health.json http://127.0.0.1:9351/health
           curl -sf -o manifest.json http://127.0.0.1:9351/ai-market/v2/manifest
-          python3 -c "import json; m=json.load(open('manifest.json')); assert len(m['tools']) == 7, len(m['tools']); print('manifest: 7 capabilities')"
+          # The manifest lists exactly what the running app serves, signed; no capability count is
+          # written here, so adding one does not turn CI red (a hard-coded 7 did, at 0.2.0).
+          python3 -c "import json; h=json.load(open('health.json')); m=json.load(open('manifest.json')); ids={t['capability_id'] for t in m['tools']}; assert len(ids) == h['capabilities'] == len(m['tools']), (len(ids), h['capabilities']); assert m['signature'], 'unsigned manifest'; assert {'emporion.vat.check@v1', 'emporion.sources@v1'} <= ids, ids; print(f'manifest: {len(ids)} capabilities, signed')"
           docker rm -f emporion-ci
