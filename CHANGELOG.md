@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — 2026-10-17
+
+Every source on terms that allow selling the answer.
+
+- `emporion.timestamp.verify@v1` no longer asks block explorers. EMPORION keeps its own copy of
+  the Bitcoin header chain from the genesis block (`bitcoin_headers.py`, ~75 MB in the data
+  volume, `EMPORION_BTC_HEADERS`), fetched peer to peer from nodes found through the DNS seeds:
+  every header's link, proof of work and difficulty (retargets included) is checked before it is
+  kept, a second node on another /16 must serve the same chain before a header is used, and the
+  chain is refreshed every 10 minutes. Slow nodes are left for faster ones, raced eight at a time.
+  Until two nodes agree, a verification is a no-charge refusal.
+- `emporion.domain.rdap@v1` follows registries' terms: at most 30 queries a minute per registry,
+  answers cached 24 hours (an hour for "not registered", marked `cached`, original fetch time
+  kept), and the registry's own notices, its terms of service among them, passed through as
+  `registry_terms`.
+- `emporion.company.lookup@v1` answers carry `personal_data`: purpose, GDPR Art. 6(1)(f) basis,
+  and retention (no copy kept).
+- 159 tests; the Bitcoin ones run on real mainnet headers, the first difficulty change included.
+
 ## 0.2.1 — 2026-10-17
 
 - `emporion.company.lookup@v1` adds Finland (PRH / YTJ open data, CC BY 4.0; Business ID check

@@ -40,7 +40,7 @@
 | `emporion.fx.rate@v1` | $0.001 | 1999 年以来任意日期、任意货币对的欧元参考汇率，所属的欧洲央行日期，经欧元以 Decimal 计算的交叉汇率，按货币最小单位取整的金额 | 欧洲央行 |
 | `emporion.sanctions.screen@v1` | $0.002 | 这个钱包地址或名称在公开制裁名单上吗？OFAC SDN（约 510 个数字货币地址）、欧盟和联合国名单，附每份名单的日期和 SHA-256 | OFAC · 欧盟 · 联合国 |
 | `emporion.timestamp.stamp@v1` | $0.001 | 通过 OpenTimestamps 日历把 SHA-256 摘要锚定到比特币；返回标准 `.ots` 证明 | OpenTimestamps |
-| `emporion.timestamp.verify@v1` | $0.001 | 升级并验证证明：当其结果等于某个比特币区块的默克尔根、且两个独立浏览器给出的该区块头一致时，即为已确认 | 比特币 |
+| `emporion.timestamp.verify@v1` | $0.001 | 升级并验证证明：当其结果等于EMPORION 直接从比特币网络获取并保存的区块头的默克尔根时（逐一检查每个区块头的工作量证明，链经两个节点确认），即为已确认 | 比特币 |
 | `emporion.web.capture@v1` | $0.003 | 把网页作为证据：最终 URL、每次重定向、IP、状态码、关键响应头、TLS 证书和正文的 SHA-256（以及正文本身，最多 512 KB）；记录的 SHA-256 锚定到比特币 | 网页本身 · OpenTimestamps |
 | `emporion.domain.rdap@v1` | $0.001 | 这个域名是谁、何时注册的：创建、到期、天数、注册商、状态、域名服务器、DNSSEC——或 `registered: false` | IANA 引导文件 → 该顶级域的注册局 |
 | `emporion.company.lookup@v1` | $0.001 | 这家公司真实存在且仍在经营吗？按编号或名称：名称、状态、法律形式、成立日期、地址、增值税号，以及登记册自己的字段 | Brønnøysund（挪威）· SIRENE/RNE（法国）· ARES（捷克）· PRH（芬兰）· Companies House（英国，需运营方密钥） |
@@ -60,7 +60,7 @@ flowchart LR
     N --> C[欧洲央行]
     N --> S[OFAC · 欧盟 · 联合国名单<br/>每 6 小时刷新]
     N --> O[OpenTimestamps 日历]
-    N --> X[两个比特币浏览器]
+    E --> X[比特币 P2P 网络<br/>区块头 · 已检查工作量证明]
     E -->|答案 + 证据：<br/>url · fetched_at · sha256| H
     H -->|签名收据| A
 ```
@@ -71,7 +71,7 @@ flowchart LR
 - **两个签名**——网关的签名收据（oracle-core，Ed25519，`ORACLE_PQC=1` 时为混合 ML-DSA）和 Hub
   验证的、与请求绑定的 `X-Provider-Signature`。
 - **无法作答的数据源不收费**——返回 `ok:false`，而 Hub 对 `ok:false` 不扣费：某国增值税登记系统
-  宕机、制裁名单未加载或超过 48 小时、时间戳日历少于两个、浏览器结果不一致。
+  宕机、制裁名单未加载或超过 48 小时、时间戳日历少于两个、区块头链尚未到达的区块。
 - **出站请求按数据源设白名单**；重定向由程序手动跟随，且只跳转到同一数据源的主机；响应大小有上限。
 - **会访问调用方指定 URL 的两项能力**（网页快照和定时器回调）只连接公网地址：仅 http(s)、
   端口 80/443，域名解析出的每个地址都要检查（不允许回环、私有、链路本地、CGNAT 或元数据地址），
@@ -129,7 +129,7 @@ sequenceDiagram
     participant A as 智能体
     participant E as EMPORION
     participant C as OpenTimestamps 日历
-    participant B as 比特币浏览器（×2）
+    participant B as 比特币节点（P2P，×2）
     A->>E: stamp {digest}
     E->>E: sha256(digest ‖ 16 个随机字节)——日历永远看不到原始摘要
     E->>C: 提交到全部四个，至少两个必须接受
@@ -139,8 +139,8 @@ sequenceDiagram
     A->>E: verify {digest, proof}
     E->>C: 在证明列出的每个日历处升级（仅限白名单）
     C-->>E: 到区块的路径
-    E->>B: 高度 H 处的区块哈希及其区块头——两处都取
-    B-->>E: 必须一致，且区块头必须哈希为该区块哈希
+    E->>B: getheaders——整条链，保存并持续更新
+    B-->>E: 每个区块头的工作量证明与难度均已检查，第二个节点一致
     E->>E: 证明结果 == 区块头的默克尔根
     E-->>A: 已确认 · 不晚于区块时间已存在 · 升级后的证明
 ```
@@ -192,6 +192,12 @@ sequenceDiagram
 - **EORI** 来自欧盟委员会的 EOS 服务；“无效”也是答案。
 - **RDAP** 只询问 IANA 引导文件为该顶级域指定的服务器（仅 https）；子域名或 URL 通过询问注册局
   归约为已注册的名称。部分国家顶级域（`.de`、`.ru`……）尚未提供 RDAP——此类请求被拒绝且不收费。
+- **对 RDAP 的礼貌。** 注册局条款禁止高频自动查询和数据重新打包，因此 EMPORION 对每个注册局每分钟
+  最多查询 30 次，每个回答缓存 24 小时（“未注册”缓存 1 小时；缓存的回答标注 `cached: true` 并保留
+  原始获取时间），并把注册局自己的通知（包括其使用条款）通过 `registry_terms` 原样转交。
+- **个人数据。** 登记册中也有个体经营者，无论登记册采用何种许可，他们的记录都是个人数据。每个公司
+  查询回答都带有 `personal_data`：目的（核实交易对手）、依据（正当利益，GDPR 第 6(1)(f) 条）和保存
+  （EMPORION 不保留副本；调用日志只保存输入的哈希）。
 - **工作日**来自内置在 EMPORION 中的 python-holidays：不联网，没有可宕机的东西；答案注明库的
   版本，因为该版本发布后才宣布的节假日不在其中。
 
@@ -240,7 +246,7 @@ curl -s http://127.0.0.1:9351/health
 | `ORACLE_PQC` | compose 中为 `1` | 混合 ML-DSA-65 签名 |
 
 测试：`pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest`（在 monorepo 中用
-`-e ../oracles/core`）——144 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
+`-e ../oracles/core`）——159 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
 规范字符串还会与 Hub 自身的函数逐字节比对。
 
 ## 数据源与许可
@@ -254,6 +260,7 @@ curl -s http://127.0.0.1:9351/health
 | 欧盟金融制裁文件 | 欧盟委员会再利用政策 | European Commission, FSF |
 | 联合国综合名单 | 联合国公开信息 | United Nations Security Council Consolidated List |
 | OpenTimestamps | 免费公共日历 | OpenTimestamps (opentimestamps.org) |
+| 比特币区块头 | 公开链数据，点对点获取 | Bitcoin network |
 | 欧盟 EORI（EOS） | 欧盟委员会再利用政策 | European Commission, EORI validation (EOS) |
 | Brønnøysund 登记中心 | NLOD 2.0 | Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0) |
 | API Recherche d'entreprises | Licence Ouverte 2.0（Etalab） | DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE) |

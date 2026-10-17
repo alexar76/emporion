@@ -11,10 +11,12 @@ stamp   The caller's SHA-256 digest gets a random 16-byte nonce appended and is 
         a few hours, when the calendars' aggregate transaction is mined.
 
 verify  The proof is upgraded at each calendar it names (only calendars on the
-        allowlist are asked), and every Bitcoin attestation is checked: the block hash
-        at that height from two independent explorers must agree, the header must hash
-        to that block hash, and its Merkle root must equal the proof's result. Then the
-        digest is proven to exist no later than that block's time.
+        allowlist are asked), and every Bitcoin attestation is checked against EMPORION's
+        own copy of the Bitcoin header chain (bitcoin_headers.py: fetched from the Bitcoin
+        P2P network, every header's proof of work and difficulty checked, agreed by a
+        second node on another network): the header at that height must have the proof's
+        result as its Merkle root. Then the digest is proven to exist no later than that
+        block's time. No block explorer is asked.
 
 Proof format and operations come from the OpenTimestamps reference library; all HTTP
 is EMPORION's own (allowlisted, size-capped).
@@ -40,6 +42,7 @@ from opentimestamps.core.serialize import (
 )
 from opentimestamps.core.timestamp import DetachedTimestampFile, Timestamp
 
+from emporion.bitcoin_headers import HeaderChain
 from emporion.net import UpstreamError, fetch
 from emporion.sources import source
 
@@ -50,7 +53,8 @@ CALENDARS = (
     "https://ots.btc.catallaxy.com",
 )
 MIN_CALENDARS = 2
-EXPLORERS = ("https://mempool.space/api", "https://blockstream.info/api")
+#: The header chain verify reads; main() sets it to the one its HeaderService keeps current.
+HEADERS: HeaderChain | None = None
 _OTS_HEADERS = {"Accept": "application/vnd.opentimestamps.v1"}
 MAX_PROOF_BYTES = 64 << 10
 
@@ -125,31 +129,10 @@ def stamp(hex_digest: str, *, calendars: tuple[str, ...] = CALENDARS) -> dict[st
     }
 
 
-def _block(height: int) -> dict[str, Any]:
-    """Block hash and header at height, agreed by both explorers and self-consistent."""
-    seen: dict[str, tuple[str, str]] = {}
-    for base in EXPLORERS:
-        bh = fetch(f"{base}/block-height/{height}", source_id="bitcoin_headers",
-                   max_bytes=256, timeout=15).body.decode().strip()
-        header = fetch(f"{base}/block/{bh}/header", source_id="bitcoin_headers",
-                       max_bytes=512, timeout=15).body.decode().strip()
-        seen[base] = (bh, header)
-    hashes = {v[0] for v in seen.values()}
-    headers = {v[1] for v in seen.values()}
-    if len(hashes) != 1 or len(headers) != 1:
-        raise UpstreamError(f"explorers disagree about block {height}; not deciding")
-    block_hash, header_hex = next(iter(seen.values()))
-    raw = bytes.fromhex(header_hex)
-    if len(raw) != 80:
-        raise UpstreamError("a Bitcoin header is 80 bytes")
-    if hashlib.sha256(hashlib.sha256(raw).digest()).digest()[::-1].hex() != block_hash:
-        raise UpstreamError(f"header does not hash to block {block_hash}")
-    return {"height": height, "block_hash": block_hash, "merkle_root": raw[36:68],
-            "time": int.from_bytes(raw[68:72], "little")}
-
-
-def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True) -> dict[str, Any]:
+def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True,
+           headers: HeaderChain | None = None) -> dict[str, Any]:
     digest = _digest(hex_digest)
+    chain = headers or HEADERS
     dtf = _deserialize_proof(proof_b64)
     if not isinstance(dtf.file_hash_op, OpSHA256):
         raise ValueError("EMPORION verifies SHA-256 proofs")
@@ -185,7 +168,10 @@ def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True) -> dict[str
     for msg, att in dtf.timestamp.all_attestations():
         if not isinstance(att, BitcoinBlockHeaderAttestation):
             continue
-        block = _block(int(att.height))
+        if chain is None:
+            raise UpstreamError("EMPORION's Bitcoin header chain is not loaded; nothing "
+                                "charged, retry shortly")
+        block = chain.block(int(att.height))
         if block["merkle_root"] != msg:
             raise ValueError(f"the proof's result does not match block {att.height}'s Merkle "
                              "root: the proof is not valid")
@@ -193,7 +179,7 @@ def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True) -> dict[str
             "height": block["height"], "block_hash": block["block_hash"],
             "block_time": datetime.fromtimestamp(block["time"], timezone.utc)
             .strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "explorers": [e.split("/")[2] for e in EXPLORERS],
+            "headers": "Bitcoin P2P network, proof of work checked, agreed by two nodes",
         })
     confirmations.sort(key=lambda c: c["height"])
     after = _serialize(dtf)
@@ -215,4 +201,4 @@ def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True) -> dict[str
     return out
 
 
-__all__ = ["CALENDARS", "EXPLORERS", "MIN_CALENDARS", "stamp", "verify"]
+__all__ = ["CALENDARS", "HEADERS", "MIN_CALENDARS", "stamp", "verify"]

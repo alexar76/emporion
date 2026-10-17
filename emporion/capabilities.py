@@ -13,7 +13,7 @@
     emporion.timestamp.stamp@v1    $0.001  anchor a SHA-256 digest in Bitcoin through
                                            the OpenTimestamps calendars
     emporion.timestamp.verify@v1   $0.001  upgrade and verify an OpenTimestamps proof
-                                           against Bitcoin headers from two explorers
+                                           against EMPORION's own Bitcoin header chain
     emporion.web.capture@v1        $0.003  a web page as evidence: final URL, redirects, IP,
                                            status, headers, TLS certificate, body SHA-256
                                            (and the body), the record anchored in Bitcoin
@@ -48,6 +48,7 @@ from emporion import (__version__, capture, eori, lei, rdap, registries, timesta
 from emporion.fx import FxService
 from emporion.sanctions import DEFAULT_THRESHOLD, LISTS, SanctionsService
 from emporion.sources import SOURCES
+from emporion.bitcoin_headers import HeaderChain, HeaderService
 from emporion.timers import TimerService
 
 PRODUCT = "emporion"
@@ -55,10 +56,11 @@ PRODUCT = "emporion"
 
 class Runtime:
     def __init__(self, *, sanctions: SanctionsService | None = None, fx: FxService | None = None,
-                 timers: TimerService | None = None):
+                 timers: TimerService | None = None, bitcoin: HeaderService | None = None):
         self.sanctions = sanctions or SanctionsService()
         self.fx = fx or FxService()
         self.timers = timers or TimerService()
+        self.bitcoin = bitcoin or HeaderService(HeaderChain())
 
 
 def _evidence_note() -> dict[str, Any]:
@@ -243,7 +245,8 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
                             "basis": s.basis, "attribution": s.attribution,
                             "licence_url": s.licence_url} for s in SOURCES.values()],
                "sanctions": runtime.sanctions.status(), "calendars": workdays.supported(),
-               "timers": runtime.timers.counts(), "version": __version__}
+               "timers": runtime.timers.counts(), "bitcoin_headers": runtime.bitcoin.status(),
+               "version": __version__}
         try:
             out["ecb_latest"] = runtime.fx.table().latest.isoformat()
         except Exception as exc:  # noqa: BLE001 — a status page reports, it does not fail
@@ -301,11 +304,12 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
         Capability(
             capability_id="emporion.timestamp.verify@v1",
             description="Upgrade and verify an OpenTimestamps proof: confirmed when its "
-                        "result equals the Merkle root of a Bitcoin block whose header two "
-                        "independent explorers agree on; returns the block, its time and "
-                        "the upgraded proof. Pending until then.",
+                        "result equals the Merkle root of the Bitcoin block header EMPORION "
+                        "holds from the Bitcoin network itself (proof of work checked, agreed "
+                        "by two nodes); returns the block, its time and the upgraded proof.",
             handler=lambda d: timestamp.verify(str(d.get("digest", "")), str(d.get("proof", "")),
-                                               upgrade=bool(d.get("upgrade", True))),
+                                               upgrade=bool(d.get("upgrade", True)),
+                                               headers=runtime.bitcoin.chain),
             product_id=PRODUCT, input_schema=VERIFY_IN,
             price_per_call_usd=0.001, p50_latency_ms=3000,
         ),

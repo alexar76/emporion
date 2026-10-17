@@ -44,7 +44,7 @@ outils qu'aucun modèle n'a : une **page web capturée comme preuve** (ancrée d
 | `emporion.fx.rate@v1` | 0,001 $ | Taux de référence de l'euro pour toute paire à toute date depuis 1999, le jour BCE dont il provient, taux croisés via l'euro en Decimal, un montant arrondi aux sous-unités de la devise | BCE |
 | `emporion.sanctions.screen@v1` | 0,002 $ | Cette adresse de portefeuille ou ce nom figure-t-il sur une liste publique de sanctions ? OFAC SDN (environ 510 adresses de monnaies numériques), listes de l'UE et de l'ONU, avec la date et le SHA-256 de chaque liste | OFAC · UE · ONU |
 | `emporion.timestamp.stamp@v1` | 0,001 $ | Ancrer une empreinte SHA-256 dans Bitcoin via les calendriers OpenTimestamps ; renvoie une preuve `.ots` standard | OpenTimestamps |
-| `emporion.timestamp.verify@v1` | 0,001 $ | Mettre à niveau et vérifier une preuve : confirmée quand son résultat égale la racine de Merkle d'un bloc Bitcoin dont l'en-tête concorde chez deux explorateurs indépendants | Bitcoin |
+| `emporion.timestamp.verify@v1` | 0,001 $ | Mettre à niveau et vérifier une preuve : confirmée quand son résultat égale la racine de Merkle de l'en-tête de bloc Bitcoin qu'EMPORION tient du réseau Bitcoin lui-même (preuve de travail de chaque en-tête vérifiée, chaîne confirmée par deux nœuds) | Bitcoin |
 | `emporion.web.capture@v1` | 0,003 $ | Une page web comme preuve : URL finale, chaque redirection, l'IP, le statut, les en-têtes clés, le certificat TLS et le SHA-256 du corps (et le corps, jusqu'à 512 Ko) ; le SHA-256 de l'enregistrement est ancré dans Bitcoin | la page elle-même · OpenTimestamps |
 | `emporion.domain.rdap@v1` | 0,001 $ | Qui a enregistré ce domaine et quand : création, expiration, âge en jours, bureau d'enregistrement, statut, serveurs de noms, DNSSEC — ou `registered: false` | bootstrap IANA → le registre du TLD |
 | `emporion.company.lookup@v1` | 0,001 $ | Cette société existe-t-elle, est-elle active ? Par numéro ou par nom : nom, statut, forme juridique, date de création, adresse, numéro de TVA et les champs propres du registre | Brønnøysund (NO) · SIRENE/RNE (FR) · ARES (CZ) · PRH (FI) · Companies House (GB, avec la clé de l'opérateur) |
@@ -64,7 +64,7 @@ flowchart LR
     N --> C[BCE]
     N --> S[listes OFAC · UE · ONU<br/>rafraîchies toutes les 6 h]
     N --> O[calendriers OpenTimestamps]
-    N --> X[deux explorateurs Bitcoin]
+    E --> X[réseau P2P Bitcoin<br/>en-têtes · preuve de travail vérifiée]
     E -->|réponse + preuves :<br/>url · fetched_at · sha256| H
     H -->|reçu signé| A
 ```
@@ -77,7 +77,7 @@ flowchart LR
   `ORACLE_PQC=1`) et la `X-Provider-Signature` liée à la requête que vérifie le hub.
 - **Une source qui ne peut pas répondre ne coûte rien** — la réponse est `ok:false`, et le hub ne
   débite rien pour un `ok:false` : registre de TVA national indisponible, listes de sanctions non
-  chargées ou vieilles de plus de 48 h, moins de deux calendriers, explorateurs en désaccord.
+  chargées ou vieilles de plus de 48 h, moins de deux calendriers, un bloc que la chaîne d'en-têtes n'atteint pas encore.
 - **Les requêtes sortantes sont limitées à une liste par source** ; les redirections sont suivies à
   la main et seulement vers les hôtes de cette même source ; la taille des réponses est plafonnée.
 - **Les deux capacités qui appellent une URL choisie par l'appelant** (capture web et callbacks
@@ -145,7 +145,7 @@ sequenceDiagram
     participant A as Agent
     participant E as EMPORION
     participant C as Calendriers OpenTimestamps
-    participant B as Explorateurs Bitcoin (×2)
+    participant B as Nœuds Bitcoin (P2P, ×2)
     A->>E: stamp {digest}
     E->>E: sha256(digest ‖ 16 octets aléatoires) — les calendriers ne voient jamais l'empreinte
     E->>C: envoi aux quatre, au moins deux doivent accepter
@@ -155,8 +155,8 @@ sequenceDiagram
     A->>E: verify {digest, proof}
     E->>C: mise à niveau auprès de chaque calendrier nommé par la preuve (autorisés seulement)
     C-->>E: chemin jusqu'au bloc
-    E->>B: hash du bloc à la hauteur H et son en-tête — chez les deux
-    B-->>E: ils doivent concorder, et l'en-tête doit donner le hash du bloc
+    E->>B: getheaders — toute la chaîne, gardée et rafraîchie
+    B-->>E: preuve de travail et difficulté de chaque en-tête vérifiées, un second nœud concorde
     E->>E: résultat de la preuve == racine de Merkle de l'en-tête
     E-->>A: confirmé · existait au plus tard à l'heure du bloc · preuve mise à niveau
 ```
@@ -216,6 +216,16 @@ minuteur vit au plus 90 jours, dans un fichier SQLite du volume de données d'EM
   (https seulement) ; un sous-domaine ou une URL est ramené au nom enregistré en interrogeant le
   registre. Certains domaines nationaux (`.de`, `.ru`…) ne publient pas encore de RDAP — c'est
   refusé et ne coûte rien.
+- **Courtoisie envers RDAP.** Les conditions des registres interdisent l'interrogation automatique
+  massive et le reconditionnement ; EMPORION interroge donc un registre au plus 30 fois par minute,
+  garde chaque réponse 24 heures (une heure pour « non enregistré » ; une réponse en cache indique
+  `cached: true` et garde l'heure d'origine) et transmet les avis du registre — ses conditions
+  d'utilisation parmi eux — dans `registry_terms`.
+- **Données personnelles.** Les registres listent aussi des entrepreneurs individuels, dont les
+  données sont personnelles quelle que soit la licence du registre. Chaque réponse porte
+  `personal_data` : la finalité (vérifier une contrepartie), la base (intérêt légitime, art. 6.1.f
+  RGPD) et la conservation (EMPORION ne garde aucune copie ; son journal ne garde qu'un hash de
+  l'entrée).
 - **Les jours ouvrés** viennent de python-holidays, compilée dans EMPORION : pas de réseau, rien
   qui tombe ; la réponse cite la version, car un férié déclaré après elle n'y figure pas.
 
@@ -269,7 +279,7 @@ le chemin `/providers/emporion/` reste l'adresse avec laquelle le hub fédère.
 | `ORACLE_PQC` | `1` dans compose | signatures hybrides ML-DSA-65 |
 
 Tests : `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (dans le monorepo :
-`-e ../oracles/core`) — 144 tests sur des extraits de vraies réponses, aucun n'atteint une source en
+`-e ../oracles/core`) — 159 tests sur des extraits de vraies réponses, aucun n'atteint une source en
 direct ; dans le monorepo, la chaîne canonique signée est en plus comparée octet par octet à la
 fonction du hub lui-même.
 
@@ -284,6 +294,7 @@ fonction du hub lui-même.
 | Fichiers des sanctions financières de l'UE | politique de réutilisation de la Commission européenne | European Commission, FSF |
 | Liste récapitulative de l'ONU | information publique de l'ONU | United Nations Security Council Consolidated List |
 | OpenTimestamps | calendriers publics gratuits | OpenTimestamps (opentimestamps.org) |
+| En-têtes de blocs Bitcoin | données publiques de la chaîne, obtenues de pair à pair | Bitcoin network |
 | EORI de l'UE (EOS) | politique de réutilisation de la Commission européenne | European Commission, EORI validation (EOS) |
 | Brønnøysund | NLOD 2.0 | Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0) |
 | API Recherche d'entreprises | Licence Ouverte 2.0 (Etalab) | DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE) |

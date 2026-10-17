@@ -85,11 +85,12 @@ SOURCES: dict[str, Source] = {
         "https://opentimestamps.org/",
     ),
     "bitcoin_headers": Source(
-        "bitcoin_headers", "Bitcoin block headers (two independent explorers)", "Public chain data",
-        "Block headers are public consensus data; two explorers must agree before a proof "
-        "is called confirmed.",
-        "Bitcoin block headers via mempool.space and blockstream.info",
-        ("mempool.space", "blockstream.info"),
+        "bitcoin_headers", "Bitcoin block headers from the Bitcoin P2P network", "Public chain data",
+        "Block headers are public consensus data that every Bitcoin node serves; EMPORION keeps "
+        "its own copy from the genesis block, checks each header's proof of work and "
+        "difficulty, and uses a header only once a second node on another network agrees.",
+        "Bitcoin network (headers fetched peer to peer)",
+        (),
     ),
     "eos": Source(
         "eos", "EU EORI validation (European Commission, EOS)",

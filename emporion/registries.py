@@ -39,6 +39,17 @@ COUNTRIES = {"NO": "brreg", "FR": "recherche_entreprises", "CZ": "ares", "FI": "
 _KEYED = {"GB": "COMPANIES_HOUSE_API_KEY"}
 
 
+#: Registers also list sole traders, whose entries are data about a person. GDPR applies to
+#: them whatever the register's licence says; every answer states the basis and the retention.
+PERSONAL_DATA = {
+    "purpose": "verifying a counterparty before a transaction",
+    "lawful_basis": "legitimate interest, GDPR Art. 6(1)(f), for the caller who asks",
+    "retention": "EMPORION keeps no copy of the answer; the call log holds only a hash of "
+                 "the input",
+    "note": "entries for sole traders are personal data: use them for this purpose only",
+}
+
+
 def available() -> list[str]:
     """The registers this EMPORION can ask now: the open ones, and keyed ones with a key."""
     return [cc for cc in COUNTRIES if cc not in _KEYED or os.environ.get(_KEYED[cc])]
@@ -376,7 +387,8 @@ def lookup(country: str, *, number: str | None = None, name: str | None = None,
                            "evidence": got.evidence(COUNTRIES[cc])}
     if number and not companies:
         out["note"] = f"the {cc} register has no company with that number"
+    out["personal_data"] = PERSONAL_DATA
     return out
 
 
-__all__ = ["COUNTRIES", "available", "lookup"]
+__all__ = ["COUNTRIES", "PERSONAL_DATA", "available", "lookup"]

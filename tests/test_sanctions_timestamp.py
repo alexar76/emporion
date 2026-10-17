@@ -248,34 +248,37 @@ def test_address_normalisation():
 HELLO_DIGEST = hashlib.sha256((FIX / "hello-world.txt").read_bytes()).hexdigest()
 HELLO_PROOF = base64.b64encode((FIX / "hello-world.txt.ots").read_bytes()).decode()
 BLOCK_HASH = (FIX / "btc_358391_hash.txt").read_text().strip()
-BLOCK_HEADER = (FIX / "btc_358391_header.txt").read_text().strip()
+#: Real mainnet headers 356832 (a difficulty period's first block) to 358391, the block the
+#: reference proof lands in.
+HEADERS_358 = (FIX / "btc_headers_356832_358391.bin").read_bytes()
 
 
-def _explorers(upstream, *, header=BLOCK_HEADER, second_hash=BLOCK_HASH):
-    for base, h in (("https://mempool.space/api", BLOCK_HASH),
-                    ("https://blockstream.info/api", second_hash)):
-        upstream.on("GET", f"{base}/block-height/358391", body=h)
-        upstream.on("GET", f"{base}/block/{h}/header", body=header)
+def _chain(agreed: int = 358391):
+    from emporion.bitcoin_headers import HeaderChain
+
+    hs = [HEADERS_358[i:i + 80] for i in range(0, len(HEADERS_358), 80)]
+    chain = HeaderChain(anchor_height=356832, anchor=hs[0])
+    chain.extend(hs[1:])
+    chain.agreed_height = agreed
+    return chain
 
 
-def test_the_reference_proof_is_confirmed_by_two_explorers(upstream):
-    _explorers(upstream)
-    out = timestamp.verify(HELLO_DIGEST, HELLO_PROOF, upgrade=False)
+def test_the_reference_proof_is_confirmed_by_the_header_chain():
+    out = timestamp.verify(HELLO_DIGEST, HELLO_PROOF, upgrade=False, headers=_chain())
     assert out["status"] == "confirmed" and out["existed_by"] == "2015-05-28T15:41:18Z"
     assert out["bitcoin"][0]["height"] == 358391 and out["bitcoin"][0]["block_hash"] == BLOCK_HASH
+    assert "agreed by two nodes" in out["bitcoin"][0]["headers"]
     assert out["proof_changed"] is False
 
 
-def test_explorers_that_disagree_decide_nothing(upstream):
-    _explorers(upstream, second_hash="00" * 32)
-    with pytest.raises(UpstreamError, match="disagree"):
-        timestamp.verify(HELLO_DIGEST, HELLO_PROOF, upgrade=False)
+def test_a_block_two_nodes_have_not_agreed_on_decides_nothing():
+    with pytest.raises(UpstreamError, match="two Bitcoin nodes agreed"):
+        timestamp.verify(HELLO_DIGEST, HELLO_PROOF, upgrade=False, headers=_chain(358390))
 
 
-def test_a_header_that_does_not_hash_to_its_block_is_refused(upstream):
-    forged = BLOCK_HEADER[:-8] + "00000000"
-    _explorers(upstream, header=forged)
-    with pytest.raises(UpstreamError, match="does not hash"):
+def test_no_header_chain_no_verdict(monkeypatch):
+    monkeypatch.setattr(timestamp, "HEADERS", None)
+    with pytest.raises(UpstreamError, match="not loaded"):
         timestamp.verify(HELLO_DIGEST, HELLO_PROOF, upgrade=False)
 
 

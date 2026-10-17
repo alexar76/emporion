@@ -20,6 +20,7 @@ BOOT = {"publication": "2026-09-30T23:00:03Z", "services": [
 @pytest.fixture
 def boot(upstream, monkeypatch):
     monkeypatch.setitem(sources.DYNAMIC_HOSTS, "iana_rdap", frozenset())
+    monkeypatch.setattr(rdap, "GATE", rdap._Gate())
     upstream.on("GET", rdap.BOOTSTRAP_URL, json=BOOT)
     return rdap.Bootstrap()
 
@@ -40,6 +41,29 @@ def test_a_domain_is_looked_up_at_its_registry(upstream, boot):
     asked = [u for m, u in upstream.calls if "/domain/" in u]
     assert asked == ["https://rdap.verisign.com/com/v1/domain/www.example.com",
                      "https://rdap.verisign.com/com/v1/domain/example.com"]
+
+
+def test_answers_are_cached_with_the_registrys_terms(upstream, boot):
+    upstream.on("GET", "https://rdap.verisign.com/com/v1/domain/example.com",
+                body=(FIX / "rdap_example_com.json").read_bytes())
+    first = rdap.lookup("example.com", bootstrap=boot, gate=rdap.GATE)
+    assert first["cached"] is False
+    assert first["registry_terms"][0]["title"] == "Terms of Service"
+    assert first["registry_terms"][0]["links"][0].startswith("https://www.verisign.com/")
+    asked = len(upstream.calls)
+    again = rdap.lookup("https://example.com/shop", bootstrap=boot, gate=rdap.GATE)
+    assert again["cached"] is True and len(upstream.calls) == asked
+    assert again["evidence"]["fetched_at"] == first["evidence"]["fetched_at"]
+
+
+def test_one_registry_is_asked_at_most_the_limit_per_minute(upstream, boot, monkeypatch):
+    monkeypatch.setattr(rdap, "PER_HOST_PER_MINUTE", 2)
+    for name in ("a-zz1.com", "b-zz1.com"):
+        assert rdap.lookup(name, bootstrap=boot, gate=rdap.GATE)["registered"] is False
+    with pytest.raises(UpstreamError, match="at most 2 times a minute"):
+        rdap.lookup("c-zz1.com", bootstrap=boot, gate=rdap.GATE)
+    # A name already answered still comes from the cache.
+    assert rdap.lookup("a-zz1.com", bootstrap=boot, gate=rdap.GATE)["cached"] is True
 
 
 def test_an_unregistered_domain_is_an_answer(upstream, boot):
@@ -89,6 +113,7 @@ def test_norway_by_number(upstream):
     assert c["vat"] == "NO923609016MVA" and c["founded"] == "1972-09-18"
     assert c["address"] == "Forusbeen 50, 4035 STAVANGER, Norge"
     assert out["evidence"]["licence"].startswith("Norwegian Licence")
+    assert "6(1)(f)" in out["personal_data"]["lawful_basis"]
 
 
 def test_norway_unknown_and_deleted(upstream):

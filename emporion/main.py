@@ -11,6 +11,7 @@ import uvicorn
 from emporion.app import build_app
 from emporion.capabilities import Runtime
 from emporion.sanctions import SanctionsService
+from emporion.bitcoin_headers import HeaderChain, HeaderService
 from emporion.timers import TimerService
 
 
@@ -20,9 +21,13 @@ def main() -> None:
     key = Path(os.environ.get("EMPORION_SIGNING_KEY_PATH", "data/emporion_signing_key"))
     cache = os.environ.get("EMPORION_CACHE_DIR") or str(key.parent / "cache")
     timers = TimerService(os.environ.get("EMPORION_TIMERS_DB") or str(key.parent / "timers.sqlite"))
-    runtime = Runtime(sanctions=SanctionsService(cache_dir=cache), timers=timers)
+    bitcoin = HeaderService(HeaderChain(os.environ.get("EMPORION_BTC_HEADERS")
+                                        or str(key.parent / "bitcoin-headers.bin")))
+    runtime = Runtime(sanctions=SanctionsService(cache_dir=cache), timers=timers,
+                      bitcoin=bitcoin)
     runtime.sanctions.start()  # first load in the background; screens refuse until it lands
     timers.start()  # delivers due timers every 2 s; the signer is attached by build_app
+    bitcoin.start()  # headers from the Bitcoin network; verify refuses until two nodes agree
     uvicorn.run(build_app(runtime), host=os.environ.get("EMPORION_HOST", "0.0.0.0"),
                 port=int(os.environ.get("EMPORION_PORT", "9351")),
                 proxy_headers=True, forwarded_allow_ips="127.0.0.1")

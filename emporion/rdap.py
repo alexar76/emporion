@@ -13,14 +13,23 @@ not in IANA's file.
 A registry that answers 404 says the name is not registered there — an answer. A TLD
 with no RDAP service in IANA's file (some country codes still have none) cannot be
 looked up, and that costs nothing.
+
+Registries' terms of service forbid high-volume automated querying and repackaging of
+their data. So EMPORION asks one registry at most PER_HOST_PER_MINUTE times a minute,
+keeps each answer CACHE_TTL_S (an hour for "not registered"; registration data changes
+rarely; a cached answer says so
+and keeps the original fetch time in its evidence), and passes the registry's own notices
+— its terms of service among them — through in every answer, as `registry_terms`.
 """
 
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import re
 import threading
 import time
+from collections import OrderedDict, deque
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -29,6 +38,11 @@ from emporion.net import UpstreamError, fetch
 
 BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 BOOTSTRAP_TTL_S = 24 * 3600
+CACHE_TTL_S = 24 * 3600
+#: "Not registered" is kept shorter: a free name can be taken within the day.
+CACHE_TTL_UNREGISTERED_S = 3600
+CACHE_MAX = 20_000
+PER_HOST_PER_MINUTE = 30
 _LABEL = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
 _RDAP_HEADERS = {"Accept": "application/rdap+json, application/json"}
 
@@ -97,8 +111,85 @@ def _parse_time(value: Any) -> dt.datetime | None:
         return None
 
 
-def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP) -> dict[str, Any]:
+class _Gate:
+    """Per-registry request budget, and the answers already fetched."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.calls: dict[str, deque[float]] = {}
+        self.cache: OrderedDict[str, tuple[float, float, dict[str, Any]]] = OrderedDict()
+
+    def take(self, host: str) -> None:
+        now = time.monotonic()
+        with self.lock:
+            q = self.calls.setdefault(host, deque())
+            while q and now - q[0] > 60:
+                q.popleft()
+            if len(q) >= PER_HOST_PER_MINUTE:
+                wait = int(60 - (now - q[0])) + 1
+                raise UpstreamError(f"EMPORION asks {host} at most {PER_HOST_PER_MINUTE} times a "
+                                    f"minute, as registries' terms require; retry in {wait} s, "
+                                    "nothing charged")
+            q.append(now)
+
+    def get(self, key: str) -> tuple[float, dict[str, Any]] | None:
+        with self.lock:
+            hit = self.cache.get(key)
+            if hit is None:
+                return None
+            stored_at, ttl, out = hit
+            if time.time() - stored_at > ttl:
+                del self.cache[key]
+                return None
+            self.cache.move_to_end(key)
+            return stored_at, copy.deepcopy(out)
+
+    def put(self, keys: list[str], out: dict[str, Any]) -> None:
+        ttl = CACHE_TTL_S if out.get("registered") else CACHE_TTL_UNREGISTERED_S
+        with self.lock:
+            for k in dict.fromkeys(keys):
+                self.cache[k] = (time.time(), ttl, copy.deepcopy(out))
+                self.cache.move_to_end(k)
+            while len(self.cache) > CACHE_MAX:
+                self.cache.popitem(last=False)
+
+
+GATE = _Gate()
+
+
+def _terms(data: Any) -> list[dict[str, Any]]:
+    """The registry's own notices (its terms of service among them), passed through."""
+    out = []
+    for n in (data.get("notices") or []) if isinstance(data, dict) else []:
+        if not isinstance(n, dict):
+            continue
+        links = [str(l.get("href")) for l in n.get("links") or []
+                 if isinstance(l, dict) and str(l.get("href", "")).startswith("http")]
+        text = " ".join(str(x) for x in n.get("description") or [])[:400]
+        out.append({"title": n.get("title"), "description": text or None, "links": links[:3]})
+    return out[:6]
+
+
+def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP,
+           gate: _Gate | None = None) -> dict[str, Any]:
     name = normalise(domain)
+    gate = gate or GATE
+    hit = gate.get(name)
+    if hit is not None:
+        stored_at, out = hit
+        out["cached"] = True
+        out["cache_age_s"] = int(time.time() - stored_at)
+        created = _parse_time(out.get("created"))
+        if created and created.tzinfo:
+            out["age_days"] = (dt.datetime.now(dt.timezone.utc) - created).days
+        return out
+    out = _fetch(name, bootstrap, gate)
+    gate.put([name, out["domain"]], out)
+    out["cached"] = False
+    return out
+
+
+def _fetch(name: str, bootstrap: Bootstrap, gate: _Gate) -> dict[str, Any]:
     services = bootstrap.get()
     labels = name.split(".")
     base = None
@@ -126,6 +217,7 @@ def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP) -> dict[str, Any]:
         last: Exception | None = None
         for url in base:
             try:
+                gate.take((urlsplit(url).hostname or "").lower())
                 return fetch(f"{url}domain/{candidate}", source_id="iana_rdap",
                              headers=_RDAP_HEADERS, max_bytes=1 << 20, timeout=20,
                              ok_statuses=(200, 400, 404))
@@ -144,8 +236,13 @@ def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP) -> dict[str, Any]:
     out: dict[str, Any] = {"domain": registrable if got.status == 200 else candidates[-1],
                            "queried": name, "tld": tld}
     if got.status == 404:
+        try:
+            terms = _terms(got.json())
+        except UpstreamError:
+            terms = []
         out.update({"registered": False,
-                    "note": f"the .{tld} registry has no record of {name}"})
+                    "note": f"the .{tld} registry has no record of {name}",
+                    "registry_terms": terms})
         out["evidence"] = got.evidence("iana_rdap")
         return out
     data = got.json()
@@ -174,6 +271,7 @@ def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP) -> dict[str, Any]:
                                for n in data.get("nameservers", []) or []
                                if isinstance(n, dict) and n.get("ldhName")}),
         "dnssec": bool((data.get("secureDNS") or {}).get("delegationSigned")),
+        "registry_terms": _terms(data),
         "evidence": got.evidence("iana_rdap"),
     })
     if out["age_days"] is not None and out["age_days"] < 90:
@@ -181,4 +279,5 @@ def lookup(domain: str, *, bootstrap: Bootstrap = BOOTSTRAP) -> dict[str, Any]:
     return out
 
 
-__all__ = ["BOOTSTRAP", "BOOTSTRAP_URL", "Bootstrap", "lookup", "normalise"]
+__all__ = ["BOOTSTRAP", "BOOTSTRAP_URL", "Bootstrap", "CACHE_TTL_S", "GATE",
+           "PER_HOST_PER_MINUTE", "lookup", "normalise"]

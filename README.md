@@ -50,7 +50,7 @@ switch, that calls the agent back with a signed event.
 | `emporion.fx.rate@v1` | $0.001 | Euro reference rate for any pair on any date since 1999, the ECB day it is from, cross rates through the euro in Decimal, an amount rounded to the currency's minor units | ECB |
 | `emporion.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~510 digital-currency addresses), EU and UN lists, with each list's date and SHA-256 | OFAC · EU · UN |
 | `emporion.timestamp.stamp@v1` | $0.001 | Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; returns a standard `.ots` proof | OpenTimestamps |
-| `emporion.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of a Bitcoin block whose header two independent explorers agree on | Bitcoin |
+| `emporion.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of the Bitcoin block header EMPORION holds from the Bitcoin network itself (every header's proof of work checked, the chain agreed by two nodes) | Bitcoin |
 | `emporion.web.capture@v1` | $0.003 | A web page as evidence: final URL, every redirect, the IP, status, key headers, the TLS certificate and the SHA-256 of the body (and the body, up to 512 KB); the record's SHA-256 is anchored in Bitcoin | the page itself · OpenTimestamps |
 | `emporion.domain.rdap@v1` | $0.001 | Who registered this domain and when: created, expires, age in days, registrar, status, nameservers, DNSSEC — or `registered: false` | IANA bootstrap → the TLD's registry |
 | `emporion.company.lookup@v1` | $0.001 | Is this company real and alive? By number or name: name, status, legal form, founding date, address, VAT number, and the register's own fields | Brønnøysund (NO) · SIRENE/RNE (FR) · ARES (CZ) · PRH (FI) · Companies House (GB, with the operator's key) |
@@ -70,7 +70,7 @@ flowchart LR
     N --> C[ECB]
     N --> S[OFAC · EU · UN lists<br/>refreshed every 6 h]
     N --> O[OpenTimestamps calendars]
-    N --> X[two Bitcoin explorers]
+    E --> X[Bitcoin P2P network<br/>headers · proof of work checked]
     E -->|answer + evidence:<br/>url · fetched_at · sha256| H
     H -->|signed receipt| A
 ```
@@ -83,7 +83,7 @@ flowchart LR
   `ORACLE_PQC=1`) and the request-bound `X-Provider-Signature` the hub verifies.
 - **A source that cannot answer costs nothing** — the answer is `ok:false`, and the hub debits
   nothing for `ok:false`: a member state's VAT registry that is down, sanctions lists not loaded or
-  older than 48 h, fewer than two timestamp calendars, explorers that disagree.
+  older than 48 h, fewer than two timestamp calendars, a block the header chain does not reach yet.
 - **Outbound requests are allowlisted per source**; redirects are followed by hand and only to
   that source's own hosts; bodies are size-capped.
 - **The two capabilities that call a URL the caller names** (web capture and timer callbacks)
@@ -146,7 +146,7 @@ sequenceDiagram
     participant A as Agent
     participant E as EMPORION
     participant C as OpenTimestamps calendars
-    participant B as Bitcoin explorers (×2)
+    participant B as Bitcoin nodes (P2P, ×2)
     A->>E: stamp {digest}
     E->>E: sha256(digest ‖ 16 random bytes) — calendars never see the digest
     E->>C: submit to all four, at least two must accept
@@ -156,8 +156,8 @@ sequenceDiagram
     A->>E: verify {digest, proof}
     E->>C: upgrade at each calendar the proof names (allowlisted only)
     C-->>E: path to the block
-    E->>B: block hash at height H, and its header — from both
-    B-->>E: must agree, and the header must hash to the block hash
+    E->>B: getheaders — the whole chain, kept and refreshed
+    B-->>E: every header's proof of work and difficulty checked, a second node agrees
     E->>E: proof result == header Merkle root
     E-->>A: confirmed · existed no later than the block time · upgraded proof
 ```
@@ -215,6 +215,15 @@ in EMPORION's data volume.
 - **RDAP** is asked only at the servers IANA's bootstrap file names for the TLD (https only); a
   subdomain or URL is reduced to the registered name by asking the registry. Some country codes
   (`.de`, `.ru`…) publish no RDAP service yet — that is refused and costs nothing.
+- **RDAP etiquette.** Registries' terms forbid high-volume automated querying and repackaging, so
+  EMPORION asks one registry at most 30 times a minute, keeps each answer 24 hours (an hour for
+  "not registered"; a cached answer says `cached: true` and keeps the original fetch time), and
+  passes the registry's own notices — its terms of service among them — through as
+  `registry_terms`.
+- **Personal data.** Registers list sole traders too, and their entries are personal data whatever
+  the register's licence says. Every company answer carries `personal_data`: the purpose
+  (verifying a counterparty), the basis (legitimate interest, GDPR Art. 6(1)(f)) and the retention
+  (EMPORION keeps no copy; its call log holds only a hash of the input).
 - **Business days** come from python-holidays compiled into EMPORION: no network, nothing to go
   down; the answer names the library version, because a holiday declared after that release is
   not in it.
@@ -267,7 +276,7 @@ the `/providers/emporion/` path stays the address the hub federates with.
 | `ORACLE_PQC` | `1` in compose | hybrid ML-DSA-65 signatures |
 
 Tests: `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (in the monorepo:
-`-e ../oracles/core`) — 144 tests on excerpts of real answers, none reaching a live source; in the
+`-e ../oracles/core`) — 159 tests on excerpts of real answers, none reaching a live source; in the
 monorepo the signed canonical is also checked byte for byte against the hub's own function.
 
 ## Sources and licences
@@ -281,6 +290,7 @@ monorepo the signed canonical is also checked byte for byte against the hub's ow
 | EU Financial Sanctions Files | European Commission reuse policy | European Commission, FSF |
 | UN Consolidated List | UN public information | United Nations Security Council Consolidated List |
 | OpenTimestamps | free public calendars | OpenTimestamps (opentimestamps.org) |
+| Bitcoin block headers | public chain data, fetched peer to peer | Bitcoin network |
 | EU EORI (EOS) | European Commission reuse policy | European Commission, EORI validation (EOS) |
 | Brønnøysund Register Centre | NLOD 2.0 | Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0) |
 | API Recherche d'entreprises | Licence Ouverte 2.0 (Etalab) | DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE) |
