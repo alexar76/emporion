@@ -14,6 +14,20 @@
                                            the OpenTimestamps calendars
     emporion.timestamp.verify@v1   $0.001  upgrade and verify an OpenTimestamps proof
                                            against Bitcoin headers from two explorers
+    emporion.web.capture@v1        $0.003  a web page as evidence: final URL, redirects, IP,
+                                           status, headers, TLS certificate, body SHA-256
+                                           (and the body), the record anchored in Bitcoin
+    emporion.domain.rdap@v1        $0.001  who registered a domain and when (RDAP, from the
+                                           TLD's registry via IANA's bootstrap)
+    emporion.company.lookup@v1     $0.001  a company in its national register (NO, FR, CZ, FI;
+                                           GB with the operator's Companies House key)
+    emporion.eori.check@v1         $0.002  EU EORI number validity (European Commission)
+    emporion.calendar.check@v1     $0.001  business days: holidays and weekends of ~250
+                                           countries and of markets (TARGET2, NYSE, LSE…)
+    emporion.timer.set@v1          $0.002  a signed callback at a time, or a dead man's switch
+    emporion.timer.checkin@v1      free    keep a dead man's switch from firing
+    emporion.timer.cancel@v1       free    cancel a timer
+    emporion.timer.status@v1       free    a timer's state and last delivery
     emporion.sources@v1            free    every source's licence and, for the lists and
                                            rates, the version EMPORION holds now
 
@@ -29,18 +43,22 @@ from typing import Any
 
 from oracle_core import Capability, OracleSpec
 
-from emporion import __version__, lei, timestamp, vat
+from emporion import (__version__, capture, eori, lei, rdap, registries, timestamp, vat,
+                      workdays)
 from emporion.fx import FxService
 from emporion.sanctions import DEFAULT_THRESHOLD, LISTS, SanctionsService
 from emporion.sources import SOURCES
+from emporion.timers import TimerService
 
 PRODUCT = "emporion"
 
 
 class Runtime:
-    def __init__(self, *, sanctions: SanctionsService | None = None, fx: FxService | None = None):
+    def __init__(self, *, sanctions: SanctionsService | None = None, fx: FxService | None = None,
+                 timers: TimerService | None = None):
         self.sanctions = sanctions or SanctionsService()
         self.fx = fx or FxService()
+        self.timers = timers or TimerService()
 
 
 def _evidence_note() -> dict[str, Any]:
@@ -110,6 +128,82 @@ VERIFY_IN = {
     "required": ["digest", "proof"],
 }
 
+CAPTURE_IN = {
+    "type": "object",
+    "properties": {
+        "url": {"type": "string", "maxLength": 2048, "default": "https://example.com/",
+                "description": "an http(s) page on a public host, port 80 or 443"},
+        "include_body": {"type": "boolean", "default": True,
+                         "description": "return the body (base64) when it is 512 KB or less"},
+        "anchor": {"type": "boolean", "default": True,
+                   "description": "anchor record_sha256 in Bitcoin (OpenTimestamps)"},
+    },
+    "required": ["url"],
+}
+RDAP_IN = {
+    "type": "object",
+    "properties": {"domain": {"type": "string", "maxLength": 253, "default": "example.com",
+                              "description": "a domain name; a URL or subdomain is reduced "
+                                             "to the registered name"}},
+    "required": ["domain"],
+}
+COMPANY_IN = {
+    "type": "object",
+    "properties": {
+        "country": {"type": "string", "enum": list(registries.COUNTRIES), "default": "NO"},
+        "number": {"type": "string", "maxLength": 20, "default": "923609016",
+                   "description": "NO organisation number, FR SIREN or SIRET, CZ IČO, FI "
+                                  "Business ID, GB company number"},
+        "name": {"type": "string", "maxLength": 120, "description": "or a name to search"},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
+    },
+    "required": ["country"],
+    "anyOf": [{"required": ["number"]}, {"required": ["name"]}],
+}
+EORI_IN = {
+    "type": "object",
+    "properties": {
+        "eori": {"type": "string", "maxLength": 20, "default": "CZ00177041"},
+        "eoris": {"type": "array", "items": {"type": "string", "maxLength": 20},
+                  "maxItems": eori.MAX_NUMBERS, "description": "or up to 10 numbers at once"},
+    },
+    "anyOf": [{"required": ["eori"]}, {"required": ["eoris"]}],
+}
+CALENDAR_IN = {
+    "type": "object",
+    "properties": {
+        "country": {"type": "string", "maxLength": 2, "default": "DE",
+                    "description": "ISO 3166 alpha-2"},
+        "subdiv": {"type": "string", "maxLength": 10, "description": "region, e.g. BY"},
+        "market": {"type": "string", "maxLength": 6,
+                   "description": "instead of country: XECB (TARGET2), XNYS, XLON, …"},
+        "date": {"type": "string", "description": "YYYY-MM-DD; default today (UTC)"},
+        "add_business_days": {"type": "integer", "minimum": -1000, "maximum": 1000},
+        "until": {"type": "string", "description": "YYYY-MM-DD: count business days to it"},
+        "list_year": {"type": "integer", "minimum": 1950, "maximum": 2100},
+        "language": {"type": "string", "maxLength": 8, "description": "holiday names, e.g. en_US"},
+    },
+}
+TIMER_SET_IN = {
+    "type": "object",
+    "properties": {
+        "callback": {"type": "string", "maxLength": 2048,
+                     "description": "https URL on a public host; receives a signed POST"},
+        "at": {"type": "string", "description": "ISO 8601 time with zone"},
+        "after_seconds": {"type": "number", "minimum": 60, "maximum": 90 * 86400},
+        "deadman_seconds": {"type": "integer", "minimum": 60, "maximum": 30 * 86400,
+                            "description": "fire unless checked in within this many seconds"},
+        "payload": {"description": "any JSON, up to 4 KB, delivered as event.payload"},
+    },
+    "required": ["callback"],
+}
+TIMER_REF_IN = {
+    "type": "object",
+    "properties": {"timer_id": {"type": "string", "maxLength": 40},
+                   "token": {"type": "string", "maxLength": 64}},
+    "required": ["timer_id", "token"],
+}
+
 
 def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
     url = public_url or os.environ.get("EMPORION_PUBLIC_URL", "http://localhost:9351")
@@ -135,11 +229,21 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
             threshold=float(d.get("threshold", DEFAULT_THRESHOLD)),
             limit=int(d.get("limit") or 10))
 
+    # GB is offered only where the operator holds a Companies House key.
+    company_in = {**COMPANY_IN, "properties": {
+        **COMPANY_IN["properties"],
+        "country": {**COMPANY_IN["properties"]["country"], "enum": registries.available()}}}
+    countries = {"NO": "Norway (Brønnøysund)", "FR": "France (SIRENE/RNE)",
+                 "CZ": "Czech Republic (ARES)", "FI": "Finland (PRH)",
+                 "GB": "United Kingdom (Companies House)"}
+    company_where = ", ".join(countries[c] for c in registries.available())
+
     def sources_handler(d: dict[str, Any]) -> dict[str, Any]:
         out = {"sources": [{"id": s.source_id, "name": s.name, "licence": s.licence,
                             "basis": s.basis, "attribution": s.attribution,
                             "licence_url": s.licence_url} for s in SOURCES.values()],
-               "sanctions": runtime.sanctions.status(), "version": __version__}
+               "sanctions": runtime.sanctions.status(), "calendars": workdays.supported(),
+               "timers": runtime.timers.counts(), "version": __version__}
         try:
             out["ecb_latest"] = runtime.fx.table().latest.isoformat()
         except Exception as exc:  # noqa: BLE001 — a status page reports, it does not fail
@@ -206,6 +310,103 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
             price_per_call_usd=0.001, p50_latency_ms=3000,
         ),
         Capability(
+            capability_id="emporion.web.capture@v1",
+            description="A web page as evidence: EMPORION fetches the URL once and returns "
+                        "the final URL, every redirect, the IP, status, key headers, the TLS "
+                        "certificate and the SHA-256 of the body (and the body, up to 512 KB); "
+                        "the record's SHA-256 is anchored in Bitcoin. Public hosts only. An "
+                        "unreachable host costs nothing.",
+            handler=lambda d: capture.capture(str(d.get("url", "")),
+                                              include_body=bool(d.get("include_body", True)),
+                                              anchor=bool(d.get("anchor", True))),
+            product_id=PRODUCT, input_schema=CAPTURE_IN,
+            price_per_call_usd=0.003, p50_latency_ms=3000,
+        ),
+        Capability(
+            capability_id="emporion.domain.rdap@v1",
+            description="Who registered this domain and when? RDAP from the TLD's own "
+                        "registry (found through IANA's bootstrap): created, updated, "
+                        "expires, age in days, registrar, status, nameservers, DNSSEC. Or "
+                        "registered: false. A TLD without RDAP costs nothing.",
+            handler=lambda d: rdap.lookup(str(d.get("domain", ""))),
+            product_id=PRODUCT, input_schema=RDAP_IN,
+            price_per_call_usd=0.001, p50_latency_ms=800,
+        ),
+        Capability(
+            capability_id="emporion.company.lookup@v1",
+            description="Is this company real and alive? Its national register by number "
+                        f"or name: {company_where}. Name, status, legal form, founding date, "
+                        "address, VAT number where published, plus the register's own fields.",
+            handler=lambda d: registries.lookup(str(d.get("country", "")),
+                                                number=d.get("number"), name=d.get("name"),
+                                                limit=int(d.get("limit") or 5)),
+            product_id=PRODUCT, input_schema=company_in,
+            price_per_call_usd=0.001, p50_latency_ms=700,
+        ),
+        Capability(
+            capability_id="emporion.eori.check@v1",
+            description="Is this EORI number valid for EU customs? The European Commission's "
+                        "EOS service, up to 10 numbers per call; name and address where the "
+                        "operator consented to publication. A service that is down costs "
+                        "nothing.",
+            handler=lambda d: eori.check(list(d.get("eoris") or []) or [str(d.get("eori", ""))]),
+            product_id=PRODUCT, input_schema=EORI_IN,
+            price_per_call_usd=0.002, p50_latency_ms=1000,
+        ),
+        Capability(
+            capability_id="emporion.calendar.check@v1",
+            description="Business days: is this date a working day in a country (or region) "
+                        "or on a market (TARGET2, NYSE, LSE…), the holiday's name, next and "
+                        "previous business day, date + N business days, business days "
+                        "between two dates, a year's holidays. Offline, python-holidays.",
+            handler=lambda d: workdays.check(
+                country=d.get("country") if not d.get("market") else None,
+                market=d.get("market"), subdiv=d.get("subdiv"), date=d.get("date"),
+                add_business_days=d.get("add_business_days"), until=d.get("until"),
+                list_year=d.get("list_year"), language=d.get("language")),
+            product_id=PRODUCT, input_schema=CALENDAR_IN,
+            price_per_call_usd=0.001, p50_latency_ms=5,
+        ),
+        Capability(
+            capability_id="emporion.timer.set@v1",
+            description="Wake me later: a signed POST to your https callback at a time (or "
+                        "after N seconds), or a dead man's switch that fires unless you check "
+                        "in every N seconds. Returns timer_id and a token, once. Retried "
+                        "after 1, 5 and 30 minutes; at most 90 days.",
+            handler=lambda d: runtime.timers.set(
+                callback=str(d.get("callback", "")), at=d.get("at"),
+                after_seconds=d.get("after_seconds"), deadman_seconds=d.get("deadman_seconds"),
+                payload=d.get("payload")),
+            product_id=PRODUCT, input_schema=TIMER_SET_IN,
+            price_per_call_usd=0.002, p50_latency_ms=300,
+        ),
+        Capability(
+            capability_id="emporion.timer.checkin@v1",
+            description="Free. Check in to a dead man's switch: its deadline moves "
+                        "deadman_seconds ahead. Needs the timer's token.",
+            handler=lambda d: runtime.timers.checkin(str(d.get("timer_id", "")),
+                                                     str(d.get("token", ""))),
+            product_id=PRODUCT, input_schema=TIMER_REF_IN,
+            price_per_call_usd=0.0, p50_latency_ms=5,
+        ),
+        Capability(
+            capability_id="emporion.timer.cancel@v1",
+            description="Free. Cancel a timer before it fires. Needs the timer's token.",
+            handler=lambda d: runtime.timers.cancel(str(d.get("timer_id", "")),
+                                                    str(d.get("token", ""))),
+            product_id=PRODUCT, input_schema=TIMER_REF_IN,
+            price_per_call_usd=0.0, p50_latency_ms=5,
+        ),
+        Capability(
+            capability_id="emporion.timer.status@v1",
+            description="Free. A timer's state (armed, retrying, fired, failed, cancelled, "
+                        "expired), its deadline and its last delivery. Needs the token.",
+            handler=lambda d: runtime.timers.status(str(d.get("timer_id", "")),
+                                                    str(d.get("token", ""))),
+            product_id=PRODUCT, input_schema=TIMER_REF_IN,
+            price_per_call_usd=0.0, p50_latency_ms=5,
+        ),
+        Capability(
             capability_id="emporion.sources@v1",
             description="Free. Every EMPORION source with its licence and attribution, the "
                         "sanctions lists it holds now (publication date, entries, SHA-256, "
@@ -217,13 +418,17 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
     return OracleSpec(
         name="EMPORION — public-record facts for agents that trade",
         product_id=PRODUCT,
-        description="EU VAT validity (VIES), legal entities (GLEIF LEI), ECB reference rates, "
-                    "sanctions-list lookups (OFAC SDN with wallet addresses, EU, UN) and "
-                    "Bitcoin-anchored timestamps (OpenTimestamps) — each answer signed, with "
-                    "the source, fetch time and SHA-256 of what the source returned.",
+        description="EU VAT validity (VIES), legal entities (GLEIF LEI), national company "
+                    "registers, EORI numbers, domain registrations (RDAP), ECB reference "
+                    "rates, sanctions-list lookups (OFAC SDN with wallet addresses, EU, UN), "
+                    "business-day calendars, Bitcoin-anchored timestamps (OpenTimestamps), web "
+                    "pages captured as evidence, and timers with a dead man's switch — each "
+                    "answer signed, with the source, fetch time and SHA-256 of what the source "
+                    "returned.",
         public_url=url,
         categories=["commerce", "compliance", "kyb", "vat", "lei", "fx", "sanctions",
-                    "timestamping", "notary", "bitcoin"],
+                    "timestamping", "notary", "bitcoin", "eori", "rdap", "company-registry",
+                    "business-days", "web-capture", "scheduling"],
         capabilities=caps,
         signing_key_path=os.environ.get("EMPORION_SIGNING_KEY_PATH", "data/emporion_signing_key"),
         version=__version__,

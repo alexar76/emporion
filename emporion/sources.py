@@ -91,9 +91,89 @@ SOURCES: dict[str, Source] = {
         "Bitcoin block headers via mempool.space and blockstream.info",
         ("mempool.space", "blockstream.info"),
     ),
+    "eos": Source(
+        "eos", "EU EORI validation (European Commission, EOS)",
+        "European Commission reuse policy (Decision 2011/833/EU)",
+        "A public verification service of the European Commission for Economic Operators "
+        "Registration and Identification numbers; name and address appear only where the "
+        "operator consented to their publication. EMPORION stores nothing.",
+        "European Commission, EORI validation (EOS)",
+        ("ec.europa.eu",),
+        "https://ec.europa.eu/taxation_customs/dds2/eos/eori_validation.jsp",
+    ),
+    "brreg": Source(
+        "brreg", "Brønnøysund Register Centre — Central Coordinating Register for Legal Entities (Norway)",
+        "Norwegian Licence for Open Government Data (NLOD) 2.0",
+        "Open data of the Norwegian state; free reuse with attribution.",
+        "Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0)",
+        ("data.brreg.no",),
+        "https://data.norge.no/nlod/en/2.0",
+    ),
+    "recherche_entreprises": Source(
+        "recherche_entreprises", "API Recherche d'entreprises (France: SIRENE and the RNE)",
+        "Licence Ouverte / Open Licence 2.0 (Etalab)",
+        "French public-sector open data from INSEE's SIRENE register and the national "
+        "register of companies, served by the State's digital directorate (DINUM).",
+        "DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE), Licence Ouverte 2.0",
+        ("recherche-entreprises.api.gouv.fr",),
+        "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    ),
+    "ares": Source(
+        "ares", "ARES — Administrative Register of Economic Subjects (Czech Republic)",
+        "Czech public administration open data",
+        "Published by the Czech Ministry of Finance for free public use.",
+        "Ministerstvo financí ČR, ARES",
+        ("ares.gov.cz",),
+        "https://ares.gov.cz/stranky/vyvojar-info",
+    ),
+    "prh": Source(
+        "prh", "PRH / YTJ open data — Finnish Trade Register and Business Information System",
+        "Creative Commons Attribution 4.0 (CC BY 4.0)",
+        "Open data of the Finnish Patent and Registration Office and the Tax Administration.",
+        "Finnish Patent and Registration Office (PRH), YTJ open data, CC BY 4.0",
+        ("avoindata.prh.fi",),
+        "https://www.prh.fi/en/presentation_and_duties/opendata.html",
+    ),
+    "companies_house": Source(
+        "companies_house", "Companies House — UK register of companies",
+        "Open Government Licence v3.0",
+        "Public register data of the UK Registrar of Companies; the API needs a free key, held "
+        "by the operator.",
+        "Contains public sector information from Companies House, licensed under the Open "
+        "Government Licence v3.0",
+        ("api.company-information.service.gov.uk",),
+        "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    ),
+    "iana_rdap": Source(
+        "iana_rdap", "RDAP — domain registration data (IANA bootstrap, then the TLD registry)",
+        "Public registration data (RFC 9083)",
+        "IANA's bootstrap file names each TLD's RDAP service; the answer is what that "
+        "registry publishes. Only registries named in IANA's file are asked.",
+        "IANA RDAP bootstrap and the TLD registry's RDAP service",
+        ("data.iana.org",),
+        "https://www.iana.org/help/rdap-faq",
+    ),
+    "web": Source(
+        "web", "A web page the caller names (web capture)",
+        "The page's own terms; EMPORION returns it to the caller as evidence only",
+        "EMPORION fetches one page once, as a browser would, and records what it answered. "
+        "The content belongs to its publisher.",
+        "The publisher of the captured page",
+        (),
+    ),
+    "holidays": Source(
+        "holidays", "python-holidays — public holidays and market calendars", "MIT",
+        "An open-source library compiled into EMPORION: no network at answer time.",
+        "python-holidays (vacanza/holidays), MIT",
+        (),
+        "https://github.com/vacanza/holidays/blob/dev/LICENSE",
+    ),
 }
 
 ALLOWED_HOSTS: frozenset[str] = frozenset(h for s in SOURCES.values() for h in s.hosts)
+#: Hosts approved at run time by a source's own root of trust — RDAP servers named in
+#: IANA's bootstrap file. Filled only by the module that loaded that file.
+DYNAMIC_HOSTS: dict[str, frozenset[str]] = {}
 
 
 def source(source_id: str) -> Source:
@@ -103,4 +183,4 @@ def source(source_id: str) -> Source:
         raise ValueError(f"source not approved: {source_id}") from None
 
 
-__all__ = ["ALLOWED_HOSTS", "SOURCES", "Source", "source"]
+__all__ = ["ALLOWED_HOSTS", "DYNAMIC_HOSTS", "SOURCES", "Source", "source"]

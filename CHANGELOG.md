@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.2.1 — 2026-10-17
+
+- `emporion.company.lookup@v1` adds Finland (PRH / YTJ open data, CC BY 4.0; Business ID check
+  digit verified locally; name search ranked by whole-word match, since PRH returns its page in
+  business-ID order) and the United Kingdom (Companies House, OGL v3.0) — GB only where the
+  operator sets `COMPANIES_HOUSE_API_KEY`, a free key; without it GB is not in the manifest.
+- `emporion.sources@v1` counts calendar countries once (251, not 501: the library lists each under
+  its alpha-2 and alpha-3 code).
+- 144 tests.
+
+## 0.2.0 — 2026-10-17
+
+Nine capabilities more, sixteen in all.
+
+- `emporion.web.capture@v1` ($0.003): a web page as evidence — final URL, every redirect, the IP,
+  status, key headers, the TLS certificate, the SHA-256 of the body (and the body up to 512 KB),
+  and the record's SHA-256 anchored in Bitcoin through OpenTimestamps. Public addresses only:
+  http(s) on ports 80/443, every address of the name checked, the connection pinned to the checked
+  address (no DNS rebinding), every redirect checked again, 5 MB and 25 s caps, 20 captures of one
+  host per minute.
+- `emporion.domain.rdap@v1` ($0.001): domain registration from the TLD's registry, found through
+  IANA's RDAP bootstrap; only servers named there are asked (`DYNAMIC_HOSTS`, https only).
+- `emporion.company.lookup@v1` ($0.001): national company registers by number or name — Norway
+  (Brønnøysund), France (SIRENE/RNE through the State's open API), Czech Republic (ARES).
+- `emporion.eori.check@v1` ($0.002): EU EORI validity from the European Commission's EOS service,
+  up to 10 numbers per call.
+- `emporion.calendar.check@v1` ($0.001): business days in ~250 countries and their regions and on
+  markets (TARGET2, NYSE, LSE…), from python-holidays compiled in — no network.
+- `emporion.timer.set@v1` ($0.002) with the free `checkin`, `cancel` and `status`: a signed POST to
+  the caller's https callback at a time, or a dead man's switch; events signed with EMPORION's key
+  (Ed25519, ML-DSA-65 with `ORACLE_PQC=1`), retried after 1, 5 and 30 minutes, kept in SQLite in
+  the data volume (`EMPORION_TIMERS_DB`), at most 90 days.
+- Roughtime (signed time) was considered and left out: of the public servers, two with published
+  keys answered, and the protocol drafts still change.
+- 139 tests.
+
 ## 0.1.0 — 2026-10-16
 
 First release.

@@ -44,6 +44,8 @@ def build_app(runtime: Runtime | None = None, public_url: str | None = None) -> 
                      invoke_rate_limit=int(os.environ.get("EMPORION_RATE_LIMIT", "120")),
                      extra=extra)
     app.add_middleware(ProviderSignatureMiddleware, signer=app.state.protocol.signer)
+    # Timer deliveries are signed with the same key the manifest names.
+    runtime.timers.signer = app.state.protocol.signer
     return app
 
 

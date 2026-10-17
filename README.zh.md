@@ -26,6 +26,11 @@
 
 *Emporion*（ἐμπόριον）：古希腊城邦的商站，商人在那里会面并结算。
 
+从 0.2.0 起，它也回答接下来的问题：这家公司在本国登记册里吗？它的 EORI 号能否用于海关？
+这家网店的域名注册了多久？在巴伐利亚或 TARGET2 上第五个工作日是哪天？它还给代理两样任何模型
+都没有的工具：**作为证据的网页快照**（锚定到比特币），以及**定时器**——包括“死人开关”——用签名
+事件回调代理。
+
 ## 能力
 
 | 能力 | 价格 | 回答什么 | 数据源 |
@@ -36,6 +41,13 @@
 | `emporion.sanctions.screen@v1` | $0.002 | 这个钱包地址或名称在公开制裁名单上吗？OFAC SDN（约 510 个数字货币地址）、欧盟和联合国名单，附每份名单的日期和 SHA-256 | OFAC · 欧盟 · 联合国 |
 | `emporion.timestamp.stamp@v1` | $0.001 | 通过 OpenTimestamps 日历把 SHA-256 摘要锚定到比特币；返回标准 `.ots` 证明 | OpenTimestamps |
 | `emporion.timestamp.verify@v1` | $0.001 | 升级并验证证明：当其结果等于某个比特币区块的默克尔根、且两个独立浏览器给出的该区块头一致时，即为已确认 | 比特币 |
+| `emporion.web.capture@v1` | $0.003 | 把网页作为证据：最终 URL、每次重定向、IP、状态码、关键响应头、TLS 证书和正文的 SHA-256（以及正文本身，最多 512 KB）；记录的 SHA-256 锚定到比特币 | 网页本身 · OpenTimestamps |
+| `emporion.domain.rdap@v1` | $0.001 | 这个域名是谁、何时注册的：创建、到期、天数、注册商、状态、域名服务器、DNSSEC——或 `registered: false` | IANA 引导文件 → 该顶级域的注册局 |
+| `emporion.company.lookup@v1` | $0.001 | 这家公司真实存在且仍在经营吗？按编号或名称：名称、状态、法律形式、成立日期、地址、增值税号，以及登记册自己的字段 | Brønnøysund（挪威）· SIRENE/RNE（法国）· ARES（捷克）· PRH（芬兰）· Companies House（英国，需运营方密钥） |
+| `emporion.eori.check@v1` | $0.002 | 这个 EORI 号在欧盟海关有效吗？一次最多 10 个；经营者同意公开时附名称和地址 | 欧盟委员会（EOS） |
+| `emporion.calendar.check@v1` | $0.001 | 约 250 个国家（及地区）或市场（TARGET2、NYSE、LSE……）的工作日：节假日、下一个/上一个工作日、日期 + N 个工作日、两日期间的工作日数、某年的节假日 | python-holidays（离线） |
+| `emporion.timer.set@v1` | $0.002 | 在指定时间向你的 https 回调发送签名 POST，或设置“死人开关”：每 N 秒内不签到就触发 | — |
+| `emporion.timer.checkin@v1` · `.cancel@v1` · `.status@v1` | 免费 | 为死人开关签到、取消定时器、查看其状态（凭定时器令牌） | — |
 | `emporion.sources@v1` | 免费 | 每个数据源的许可与署名、当前持有的制裁名单、最新的欧洲央行日期 | — |
 
 ```mermaid
@@ -61,6 +73,9 @@ flowchart LR
 - **无法作答的数据源不收费**——返回 `ok:false`，而 Hub 对 `ok:false` 不扣费：某国增值税登记系统
   宕机、制裁名单未加载或超过 48 小时、时间戳日历少于两个、浏览器结果不一致。
 - **出站请求按数据源设白名单**；重定向由程序手动跟随，且只跳转到同一数据源的主机；响应大小有上限。
+- **会访问调用方指定 URL 的两项能力**（网页快照和定时器回调）只连接公网地址：仅 http(s)、
+  端口 80/443，域名解析出的每个地址都要检查（不允许回环、私有、链路本地、CGNAT 或元数据地址），
+  连接固定到已检查的地址，每次重定向重新检查，同一主机每分钟最多 20 次快照。
 
 ## 示例
 
@@ -73,6 +88,12 @@ inv '{"capability_id":"emporion.lei.lookup@v1","input":{"name":"Deutsche Bank"}}
 inv '{"capability_id":"emporion.fx.rate@v1","input":{"base":"USD","quote":"JPY","date":"2026-10-11","amount":"100"}}'
 inv '{"capability_id":"emporion.sanctions.screen@v1","input":{"address":"0x…"}}'
 inv '{"capability_id":"emporion.timestamp.stamp@v1","input":{"digest":"'"$(sha256sum contract.pdf | cut -d' ' -f1)"'"}}'
+inv '{"capability_id":"emporion.web.capture@v1","input":{"url":"https://shop.example/terms"}}'
+inv '{"capability_id":"emporion.domain.rdap@v1","input":{"domain":"shop.example"}}'
+inv '{"capability_id":"emporion.company.lookup@v1","input":{"country":"FR","number":"552032534"}}'
+inv '{"capability_id":"emporion.eori.check@v1","input":{"eori":"CZ00177041"}}'
+inv '{"capability_id":"emporion.calendar.check@v1","input":{"market":"XECB","add_business_days":5}}'
+inv '{"capability_id":"emporion.timer.set@v1","input":{"callback":"https://agent.example/hook","deadman_seconds":3600,"payload":{"release":"escrow-7"}}}'
 ```
 
 通过 Hub 时，同样的调用会付费并获得收据：`POST https://modelmarket.dev/ai-market/v2/invoke`，
@@ -127,6 +148,53 @@ sequenceDiagram
 证明是标准的 OpenTimestamps 文件：任何 OpenTimestamps 客户端都能验证，无需 EMPORION。参考示例
 （`hello-world.txt`）可验证到 2015-05-28 的第 358 391 号区块。
 
+### 网页快照：页面当时说了什么
+
+EMPORION 像浏览器一样抓取一次页面，返回 `record`：请求的 URL、最终 URL、每次重定向及其状态码和
+IP、时间、状态码、说明页面是什么的响应头（类型、长度、`Last-Modified`、`ETag`、`Date`、
+`Server`……）、服务器出示的 TLS 证书（主体、签发者、有效期、名称、证书的 SHA-256）、页面标题和
+`body_sha256`。正文不超过 512 KB 时以 `body_b64` 返回（单页上限 5 MB）。`record_sha256` 是记录
+按键排序、紧凑分隔的 JSON 的 SHA-256，并通过 OpenTimestamps 锚定到比特币——之后可用
+`emporion.timestamp.verify@v1` 验证。404 也是快照（页面就是这么说的）；无法连接的主机或无法验证
+的证书不收费。
+
+### 定时器与死人开关
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as 代理
+    participant E as EMPORION
+    participant C as 代理的回调（https）
+    A->>E: timer.set {callback, deadman_seconds: 3600, payload}
+    E-->>A: timer_id + 令牌（仅此一次）
+    loop 代理存活期间
+        A->>E: timer.checkin {timer_id, token}
+        E-->>A: due_at 向后推 3600 秒
+    end
+    Note over A: 代理停止
+    E->>C: POST {event, signature}——对事件的 Ed25519（+ ML-DSA）签名
+    C-->>E: 2xx（否则在 1、5、30 分钟后重试）
+```
+
+改用 `at`（带时区的 ISO 时间）或 `after_seconds` 则设置一次性回调。事件包含定时器 id、类型、计划
+与实际触发时间、尝试次数和你的 payload（最多 4 KB）；签名使用 EMPORION 签名清单中的密钥，对按键
+排序、紧凑分隔的事件 JSON 签名。令牌只以 SHA-256 保存。定时器最长存活 90 天，存放在 EMPORION
+数据卷中的一个 SQLite 文件里。
+
+### 公司登记册、EORI、域名、工作日
+
+- **公司登记册**直接来自登记册本身：挪威 Brønnøysund 登记中心（NLOD 2.0）、经法国政府开放 API
+  提供的 SIRENE 与国家登记册（Licence Ouverte 2.0）、捷克 ARES、芬兰 PRH（CC BY 4.0），以及——在
+  运营方设置了免费密钥 `COMPANIES_HOUSE_API_KEY` 时——英国 Companies House（OGL v3.0）；没有密钥
+  就不提供 GB。编号先在本地校验（挪威、捷克和芬兰的校验位；法国 SIRET 取其 SIREN）。状态：经营中、
+  已停业/已解散/已注销、破产、清算中、重整中。
+- **EORI** 来自欧盟委员会的 EOS 服务；“无效”也是答案。
+- **RDAP** 只询问 IANA 引导文件为该顶级域指定的服务器（仅 https）；子域名或 URL 通过询问注册局
+  归约为已注册的名称。部分国家顶级域（`.de`、`.ru`……）尚未提供 RDAP——此类请求被拒绝且不收费。
+- **工作日**来自内置在 EMPORION 中的 python-holidays：不联网，没有可宕机的东西；答案注明库的
+  版本，因为该版本发布后才宣布的节假日不在其中。
+
 ## 诚实的限制
 
 - VIES 回答的是该国登记系统此刻的回答；有些国家不返回名称和地址。EMPORION 不存储任何内容。
@@ -134,6 +202,11 @@ sequenceDiagram
 - 参考汇率仅供参考，不是交易汇率。
 - 制裁筛查是在三份公开名单中的查询，不是法律意见或合规方案；不包括其他司法辖区的名单。
 - 时间戳证明的是不晚于某区块时间就已存在，而不是作者身份。
+- 快照显示的是服务器在那一刻回答 EMPORION 的内容；其他访客、其他国家或不同 cookie 可能看到
+  不同的页面。它不表示内容为真。
+- 各登记册公开的内容不同；目前覆盖四个国家（有英国密钥时为五个）；波兰 KRS 的 API 在测试时没有响应。
+- 回调在四次尝试内得到 2xx 即视为送达，至少送达一次；接收方应把 `due_at` 相同的重复
+  `timer_id` 视为同一事件。
 
 ## 运行
 
@@ -162,10 +235,12 @@ curl -s http://127.0.0.1:9351/health
 | `EMPORION_PORT` | `9351` | 监听端口 |
 | `EMPORION_RATE_LIMIT` | `120` | 每个客户端每分钟调用次数 |
 | `EMPORION_CORS_ORIGINS` | 空（不允许浏览器来源） | CORS 白名单 |
+| `COMPANIES_HOUSE_API_KEY` | 空（不提供 GB） | 运营方的免费 Companies House API 密钥 |
+| `EMPORION_TIMERS_DB` | 签名密钥旁的 `timers.sqlite` | 定时器的存放位置 |
 | `ORACLE_PQC` | compose 中为 `1` | 混合 ML-DSA-65 签名 |
 
 测试：`pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest`（在 monorepo 中用
-`-e ../oracles/core`）——84 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
+`-e ../oracles/core`）——144 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
 规范字符串还会与 Hub 自身的函数逐字节比对。
 
 ## 数据源与许可
@@ -179,5 +254,13 @@ curl -s http://127.0.0.1:9351/health
 | 欧盟金融制裁文件 | 欧盟委员会再利用政策 | European Commission, FSF |
 | 联合国综合名单 | 联合国公开信息 | United Nations Security Council Consolidated List |
 | OpenTimestamps | 免费公共日历 | OpenTimestamps (opentimestamps.org) |
+| 欧盟 EORI（EOS） | 欧盟委员会再利用政策 | European Commission, EORI validation (EOS) |
+| Brønnøysund 登记中心 | NLOD 2.0 | Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0) |
+| API Recherche d'entreprises | Licence Ouverte 2.0（Etalab） | DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE) |
+| ARES | 捷克公共管理开放数据 | Ministerstvo financí ČR, ARES |
+| PRH / YTJ | CC BY 4.0 | Finnish Patent and Registration Office (PRH), YTJ open data |
+| Companies House（需密钥） | Open Government Licence v3.0 | Contains public sector information from Companies House, OGL v3.0 |
+| RDAP | 公开注册数据（RFC 9083） | IANA RDAP 引导文件及该顶级域注册局 |
+| python-holidays | MIT | python-holidays (vacanza/holidays) |
 
 代码：MIT——见 [LICENSE](LICENSE)。所用的 OpenTimestamps 参考库为 LGPL-3.0。

@@ -235,7 +235,7 @@
 
     <section id="caps">
       <div class="wrap">
-        <h2 data-i18n="caps_h2">Seven capabilities</h2>
+        <h2 data-i18n="caps_h2">Sixteen capabilities</h2>
         <p class="lead" data-i18n="caps_lead">Sold per call through the AIMarket hub. A source that cannot answer is a refusal, and a refusal costs nothing.</p>
         <div class="caps">
           <div class="cap"><div class="top"><code>emporion.vat.check@v1</code><span class="price">$0.002</span></div>
@@ -256,6 +256,24 @@
           <div class="cap"><div class="top"><code>emporion.timestamp.verify@v1</code><span class="price">$0.001</span></div>
             <p data-i18n="c6">Verify a proof: confirmed only when two independent explorers agree on the Bitcoin block it lands in.</p>
             <div class="src">Bitcoin</div></div>
+          <div class="cap"><div class="top"><code>emporion.web.capture@v1</code><span class="price">$0.003</span></div>
+            <p data-i18n="c8">A web page as evidence: final URL, redirects, IP, TLS certificate and the SHA-256 of the body — the record anchored in Bitcoin.</p>
+            <div class="src">the page · OpenTimestamps</div></div>
+          <div class="cap"><div class="top"><code>emporion.domain.rdap@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c9">Who registered this domain and when: age in days, registrar, status — from the TLD's own registry.</p>
+            <div class="src">IANA · RDAP</div></div>
+          <div class="cap"><div class="top"><code>emporion.company.lookup@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c10">Is this company real and alive? Its national register by number or name: Norway, France, Czech Republic, Finland.</p>
+            <div class="src">Brønnøysund · SIRENE · ARES · PRH</div></div>
+          <div class="cap"><div class="top"><code>emporion.eori.check@v1</code><span class="price">$0.002</span></div>
+            <p data-i18n="c11">Is this EORI number valid for EU customs? Up to ten at once.</p>
+            <div class="src">European Commission · EOS</div></div>
+          <div class="cap"><div class="top"><code>emporion.calendar.check@v1</code><span class="price">$0.001</span></div>
+            <p data-i18n="c12">Business days in ~250 countries or on a market (TARGET2, NYSE, LSE…): holidays, date + N business days.</p>
+            <div class="src">python-holidays · offline</div></div>
+          <div class="cap"><div class="top"><code>emporion.timer.set@v1</code><span class="price">$0.002</span></div>
+            <p data-i18n="c13">Wake me later: a signed call to your callback at a time — or a dead man's switch that fires when you stop checking in.</p>
+            <div class="src">checkin · cancel · status: free</div></div>
           <div class="cap"><div class="top"><code>emporion.sources@v1</code><span class="price" data-i18n="free">free</span></div>
             <p data-i18n="c7">Every source's licence and attribution, and which sanctions lists are held right now.</p>
             <div class="src">—</div></div>
@@ -272,7 +290,7 @@
           <div class="item"><h3 data-i18n="t2_t">Signed and bound</h3>
             <p data-i18n="t2_d">An Ed25519 signature over the answer and the request it answers — the hub checks it before the buyer pays.</p></div>
           <div class="item"><h3 data-i18n="t3_t">Only listed hosts</h3>
-            <p data-i18n="t3_d">HTTPS to each source's exact hosts, redirects checked by hand, every body size-capped, XML parsed defused.</p></div>
+            <p data-i18n="t3_d">HTTPS to each source's exact hosts, redirects checked by hand, every body size-capped, XML parsed defused. A page or callback you name is reached at public addresses only.</p></div>
           <div class="item"><h3 data-i18n="t4_t">Honest refusals</h3>
             <p data-i18n="t4_d">A sanctions list older than 48 hours or a silent registry is a refusal that costs nothing — never an empty "not listed".</p></div>
         </div>

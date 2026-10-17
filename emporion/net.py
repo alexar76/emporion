@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from emporion.sources import ALLOWED_HOSTS, source
+from emporion.sources import ALLOWED_HOSTS, DYNAMIC_HOSTS, source
 
 USER_AGENT = "EMPORION/0.1 (+https://github.com/alexar76/emporion; contact@modelmarket.dev)"
 RETRIES = 3
@@ -49,7 +49,8 @@ class Fetched:
 def _check(url: str, source_id: str) -> str:
     parts = urlsplit(url)
     host = (parts.hostname or "").lower().rstrip(".")
-    if parts.scheme != "https" or host not in ALLOWED_HOSTS or host not in source(source_id).hosts:
+    listed = host in ALLOWED_HOSTS and host in source(source_id).hosts
+    if parts.scheme != "https" or not (listed or host in DYNAMIC_HOSTS.get(source_id, ())):
         raise UpstreamError(f"host not approved for {source_id}: {host or url[:40]}")
     return url
 

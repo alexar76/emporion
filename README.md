@@ -35,6 +35,12 @@ returned**.
 
 *Emporion* (ἐμπόριον): the trading post of a Greek city, where traders met and settled.
 
+Since 0.2.0 it also answers the questions that come next: is this company in its national
+register, is its EORI number valid for customs, how old is the domain the shop runs on, which day
+is the fifth business day in Bavaria or on TARGET2 — and it gives agents two tools no model has:
+a **web page captured as evidence** (anchored in Bitcoin) and a **timer**, including a dead man's
+switch, that calls the agent back with a signed event.
+
 ## Capabilities
 
 | Capability | Price | What it answers | Source |
@@ -45,6 +51,13 @@ returned**.
 | `emporion.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~510 digital-currency addresses), EU and UN lists, with each list's date and SHA-256 | OFAC · EU · UN |
 | `emporion.timestamp.stamp@v1` | $0.001 | Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; returns a standard `.ots` proof | OpenTimestamps |
 | `emporion.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of a Bitcoin block whose header two independent explorers agree on | Bitcoin |
+| `emporion.web.capture@v1` | $0.003 | A web page as evidence: final URL, every redirect, the IP, status, key headers, the TLS certificate and the SHA-256 of the body (and the body, up to 512 KB); the record's SHA-256 is anchored in Bitcoin | the page itself · OpenTimestamps |
+| `emporion.domain.rdap@v1` | $0.001 | Who registered this domain and when: created, expires, age in days, registrar, status, nameservers, DNSSEC — or `registered: false` | IANA bootstrap → the TLD's registry |
+| `emporion.company.lookup@v1` | $0.001 | Is this company real and alive? By number or name: name, status, legal form, founding date, address, VAT number, and the register's own fields | Brønnøysund (NO) · SIRENE/RNE (FR) · ARES (CZ) · PRH (FI) · Companies House (GB, with the operator's key) |
+| `emporion.eori.check@v1` | $0.002 | Is this EORI number valid for EU customs? Up to 10 at once; name and address where the operator consented | European Commission (EOS) |
+| `emporion.calendar.check@v1` | $0.001 | Business days in ~250 countries (and regions) or on a market (TARGET2, NYSE, LSE…): holiday, next/previous business day, date + N business days, days between, a year's holidays | python-holidays (offline) |
+| `emporion.timer.set@v1` | $0.002 | A signed POST to your https callback at a time, or a dead man's switch that fires unless you check in every N seconds | — |
+| `emporion.timer.checkin@v1` · `.cancel@v1` · `.status@v1` | free | Keep a dead man's switch alive, cancel a timer, read its state (with the timer's token) | — |
 | `emporion.sources@v1` | free | Every source's licence and attribution, the sanctions lists held now, the latest ECB day | — |
 
 ```mermaid
@@ -73,6 +86,10 @@ flowchart LR
   older than 48 h, fewer than two timestamp calendars, explorers that disagree.
 - **Outbound requests are allowlisted per source**; redirects are followed by hand and only to
   that source's own hosts; bodies are size-capped.
+- **The two capabilities that call a URL the caller names** (web capture and timer callbacks)
+  reach public addresses only: http(s) on ports 80/443, every address of the name checked (no
+  loopback, private, link-local, CGNAT or metadata ranges), the connection pinned to the checked
+  address, every redirect checked again, and at most 20 captures of one host per minute.
 
 ## Examples
 
@@ -85,6 +102,12 @@ inv '{"capability_id":"emporion.lei.lookup@v1","input":{"name":"Deutsche Bank"}}
 inv '{"capability_id":"emporion.fx.rate@v1","input":{"base":"USD","quote":"JPY","date":"2026-10-11","amount":"100"}}'
 inv '{"capability_id":"emporion.sanctions.screen@v1","input":{"address":"0x…"}}'
 inv '{"capability_id":"emporion.timestamp.stamp@v1","input":{"digest":"'"$(sha256sum contract.pdf | cut -d' ' -f1)"'"}}'
+inv '{"capability_id":"emporion.web.capture@v1","input":{"url":"https://shop.example/terms"}}'
+inv '{"capability_id":"emporion.domain.rdap@v1","input":{"domain":"shop.example"}}'
+inv '{"capability_id":"emporion.company.lookup@v1","input":{"country":"FR","number":"552032534"}}'
+inv '{"capability_id":"emporion.eori.check@v1","input":{"eori":"CZ00177041"}}'
+inv '{"capability_id":"emporion.calendar.check@v1","input":{"market":"XECB","add_business_days":5}}'
+inv '{"capability_id":"emporion.timer.set@v1","input":{"callback":"https://agent.example/hook","deadman_seconds":3600,"payload":{"release":"escrow-7"}}}'
 ```
 
 Through the hub, the same calls are paid and receipted: `POST https://modelmarket.dev/ai-market/v2/invoke`
@@ -142,6 +165,60 @@ sequenceDiagram
 The proof is a standard OpenTimestamps file: it verifies with any OpenTimestamps client, without
 EMPORION. The reference example (`hello-world.txt`) verifies to block 358 391, 2015-05-28.
 
+### Web capture: what the page said
+
+EMPORION fetches the page once, as a browser would, and returns a `record`: the URL asked, the
+final URL, every redirect with its status and IP, the time, the status, the headers that say what
+the page was (content type, length, `Last-Modified`, `ETag`, `Date`, `Server`…), the TLS
+certificate the server presented (subject, issuer, validity, names, SHA-256 of the certificate),
+the page title and `body_sha256`. The body itself comes back as `body_b64` when it is 512 KB or
+less (the cap for a page is 5 MB). `record_sha256` is the SHA-256 of the record as JSON with sorted
+keys and compact separators, and it is anchored in Bitcoin through OpenTimestamps — verify it later
+with `emporion.timestamp.verify@v1`. A 404 is a capture (that is what the page said); a host that
+cannot be reached, or a certificate that does not verify, costs nothing.
+
+### Timers and the dead man's switch
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Agent
+    participant E as EMPORION
+    participant C as Agent callback (https)
+    A->>E: timer.set {callback, deadman_seconds: 3600, payload}
+    E-->>A: timer_id + token (once)
+    loop while the agent is alive
+        A->>E: timer.checkin {timer_id, token}
+        E-->>A: due_at moved 3600 s ahead
+    end
+    Note over A: the agent stops
+    E->>C: POST {event, signature} — Ed25519 (+ ML-DSA) over the event
+    C-->>E: 2xx (else retried after 1, 5, 30 min)
+```
+
+`at` (an ISO time with zone) or `after_seconds` sets a one-off call instead. The event carries the
+timer id, kind, due and fired times, the attempt and your payload (up to 4 KB); the signature is
+EMPORION's key from its signed manifest, over the event as JSON with sorted keys and compact
+separators. The token is kept only as its SHA-256. Timers live at most 90 days, in one SQLite file
+in EMPORION's data volume.
+
+### Company registers, EORI, domains, business days
+
+- **Company registers** answer from the register itself: Norway's Brønnøysund Register Centre
+  (NLOD 2.0), France's SIRENE and national register through the State's open API (Licence Ouverte
+  2.0), the Czech ARES, Finland's PRH (CC BY 4.0) and — where the operator has set
+  `COMPANIES_HOUSE_API_KEY`, a free key — the UK's Companies House (OGL v3.0); without the key GB
+  is not offered. Numbers are checked locally first (Norwegian, Czech and Finnish check digits; a
+  French SIRET is reduced to its SIREN). Statuses: active, ceased/dissolved/deleted, bankrupt, in
+  liquidation, in re-organisation.
+- **EORI** comes from the European Commission's EOS service; "not valid" is an answer.
+- **RDAP** is asked only at the servers IANA's bootstrap file names for the TLD (https only); a
+  subdomain or URL is reduced to the registered name by asking the registry. Some country codes
+  (`.de`, `.ru`…) publish no RDAP service yet — that is refused and costs nothing.
+- **Business days** come from python-holidays compiled into EMPORION: no network, nothing to go
+  down; the answer names the library version, because a holiday declared after that release is
+  not in it.
+
 ## Honest limits
 
 - VIES answers what the member state's registry answers at that moment; some states return no
@@ -151,6 +228,11 @@ EMPORION. The reference example (`hello-world.txt`) verifies to block 358 391, 2
 - Sanctions screening is a lookup in three public lists, not legal advice or a compliance
   programme; other jurisdictions' lists are not included.
 - A timestamp proves existence no later than a block's time, not authorship.
+- A web capture shows what the server answered EMPORION at that moment; another visitor, country
+  or cookie may be shown another page. It is not a statement that the content is true.
+- Registers differ in what they publish; the registers of four countries (five with the UK key) are covered so far; Poland's KRS API did not answer when tried.
+- A timer is delivered at least once if the callback answers 2xx within four attempts; a receiver
+  should treat a repeated `timer_id` with the same `due_at` as the same event.
 
 ## Run it
 
@@ -180,10 +262,12 @@ the `/providers/emporion/` path stays the address the hub federates with.
 | `EMPORION_PORT` | `9351` | listen port |
 | `EMPORION_RATE_LIMIT` | `120` | invokes per minute per client |
 | `EMPORION_CORS_ORIGINS` | empty (no browser origin) | CORS allowlist |
+| `COMPANIES_HOUSE_API_KEY` | empty (GB not offered) | the operator's free Companies House API key |
+| `EMPORION_TIMERS_DB` | `timers.sqlite` beside the signing key | where timers are kept |
 | `ORACLE_PQC` | `1` in compose | hybrid ML-DSA-65 signatures |
 
 Tests: `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (in the monorepo:
-`-e ../oracles/core`) — 84 tests on excerpts of real answers, none reaching a live source; in the
+`-e ../oracles/core`) — 144 tests on excerpts of real answers, none reaching a live source; in the
 monorepo the signed canonical is also checked byte for byte against the hub's own function.
 
 ## Sources and licences
@@ -197,5 +281,13 @@ monorepo the signed canonical is also checked byte for byte against the hub's ow
 | EU Financial Sanctions Files | European Commission reuse policy | European Commission, FSF |
 | UN Consolidated List | UN public information | United Nations Security Council Consolidated List |
 | OpenTimestamps | free public calendars | OpenTimestamps (opentimestamps.org) |
+| EU EORI (EOS) | European Commission reuse policy | European Commission, EORI validation (EOS) |
+| Brønnøysund Register Centre | NLOD 2.0 | Brønnøysundregistrene, Enhetsregisteret (NLOD 2.0) |
+| API Recherche d'entreprises | Licence Ouverte 2.0 (Etalab) | DINUM, API Recherche d'entreprises (INSEE SIRENE, INPI RNE) |
+| ARES | Czech public administration open data | Ministerstvo financí ČR, ARES |
+| PRH / YTJ | CC BY 4.0 | Finnish Patent and Registration Office (PRH), YTJ open data |
+| Companies House (with a key) | Open Government Licence v3.0 | Contains public sector information from Companies House, OGL v3.0 |
+| RDAP | public registration data (RFC 9083) | IANA RDAP bootstrap and the TLD registry |
+| python-holidays | MIT | python-holidays (vacanza/holidays) |
 
 Code: MIT — see [LICENSE](LICENSE). The OpenTimestamps reference library it uses is LGPL-3.0.
