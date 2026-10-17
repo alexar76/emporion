@@ -8,7 +8,8 @@
     emporion.fx.rate@v1            $0.001  ECB euro reference rate for any pair on any
                                            date since 1999, and a conversion
     emporion.sanctions.screen@v1   $0.002  a wallet address or a name against OFAC SDN,
-                                           the EU and the UN lists — a lookup, not a
+                                           the EU and the UK lists (UN designations through
+                                           them, with their UN numbers) — a lookup, not a
                                            compliance determination
     emporion.timestamp.stamp@v1    $0.001  anchor a SHA-256 digest in Bitcoin through
                                            the OpenTimestamps calendars
@@ -107,7 +108,8 @@ SCREEN_IN = {
                     "description": "a wallet address (EVM, Bitcoin, Tron, …)"},
         "name": {"type": "string", "maxLength": 200, "description": "a person or entity"},
         "kind": {"type": "string", "enum": ["individual", "entity", "vessel", "aircraft"]},
-        "lists": {"type": "array", "items": {"type": "string", "enum": list(LISTS)}},
+        "lists": {"type": "array", "items": {"type": "string", "enum": [*LISTS, "UN"]},
+                  "description": "default all; UN = the UK and EU entries with a UN number"},
         "threshold": {"type": "number", "minimum": 0.7, "maximum": 1.0,
                       "default": DEFAULT_THRESHOLD},
         "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 10},
@@ -225,7 +227,7 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
     def screen_handler(d: dict[str, Any]) -> dict[str, Any]:
         lists = d.get("lists")
         if lists is not None and not isinstance(lists, list):
-            raise ValueError("lists must be an array of OFAC-SDN, EU, UN")
+            raise ValueError("lists must be an array of OFAC-SDN, EU, UK, UN")
         return runtime.sanctions.screen(
             address=d.get("address"), name=d.get("name"), kind=d.get("kind"), lists=lists,
             threshold=float(d.get("threshold", DEFAULT_THRESHOLD)),
@@ -285,9 +287,9 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
         Capability(
             capability_id="emporion.sanctions.screen@v1",
             description="Is this wallet address or name on a public sanctions list? OFAC "
-                        "SDN (incl. ~500 digital-currency addresses), EU and UN lists, with "
-                        "each list's publication date and SHA-256. A lookup, not a "
-                        "compliance determination; an outdated list is refused, not used.",
+                        "SDN (incl. ~500 digital-currency addresses), EU and UK lists — UN "
+                        "designations through them, each hit with its UN number — with each "
+                        "list's date and SHA-256. A lookup, not a compliance determination.",
             handler=screen_handler, product_id=PRODUCT, input_schema=SCREEN_IN,
             price_per_call_usd=0.002, p50_latency_ms=40,
         ),
@@ -424,7 +426,8 @@ def build_spec(runtime: Runtime, public_url: str | None = None) -> OracleSpec:
         product_id=PRODUCT,
         description="EU VAT validity (VIES), legal entities (GLEIF LEI), national company "
                     "registers, EORI numbers, domain registrations (RDAP), ECB reference "
-                    "rates, sanctions-list lookups (OFAC SDN with wallet addresses, EU, UN), "
+                    "rates, sanctions-list lookups (OFAC SDN with wallet addresses, EU, UK with "
+                    "UN designations), "
                     "business-day calendars, Bitcoin-anchored timestamps (OpenTimestamps), web "
                     "pages captured as evidence, and timers with a dead man's switch — each "
                     "answer signed, with the source, fetch time and SHA-256 of what the source "

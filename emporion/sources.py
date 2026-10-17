@@ -3,7 +3,7 @@
 A positive registry, like GAIA's source_policy: a source missing here cannot be
 fetched (net.py refuses its host), and every answer carries the attribution of the
 source it relays. Hosts are exact names; redirects are followed only to a host listed
-for the same source (OFAC and the UN publish through presigned storage URLs).
+for the same source (OFAC publishes through presigned storage URLs).
 """
 
 from __future__ import annotations
@@ -64,12 +64,16 @@ SOURCES: dict[str, Source] = {
         ("webgate.ec.europa.eu",),
         "https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions",
     ),
-    "un": Source(
-        "un", "UN Security Council Consolidated List", "United Nations public information",
-        "Published by the UN Security Council for implementation by states and the public.",
-        "United Nations Security Council Consolidated List",
-        ("scsanctions.un.org", "unsolprodfiles.blob.core.windows.net"),
-        "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list",
+    "uk_fcdo": Source(
+        "uk_fcdo", "UK Sanctions List (Foreign, Commonwealth & Development Office)",
+        "Open Government Licence v3.0",
+        "UK government information, free to reuse commercially with attribution. It carries the "
+        "UN Security Council designations the UK implements, each with its UN reference number; "
+        "EMPORION reads the UN's own file no longer, as that carries no reuse licence.",
+        "Contains public sector information licensed under the Open Government Licence v3.0 "
+        "(UK Sanctions List, FCDO)",
+        ("sanctionslist.fcdo.gov.uk",),
+        "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
     ),
     "opentimestamps": Source(
         "opentimestamps", "OpenTimestamps public calendars", "Free public service",

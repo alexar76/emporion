@@ -23,7 +23,7 @@ Un agente que compra, vende o paga necesita hechos que ningún modelo puede inve
 de IVA es válido, quién es esta empresa, cuál fue el tipo del euro aquel día, si este monedero está
 en una lista de sanciones y si puedo probar que este documento existía ayer. EMPORION responde cada
 uno desde el **registro público** —la Comisión Europea, GLEIF, el BCE, el Tesoro de EE. UU., la UE,
-la ONU y Bitcoin— y firma cada respuesta junto con **de dónde viene, cuándo se obtuvo y el SHA-256
+el Reino Unido y Bitcoin— y firma cada respuesta junto con **de dónde viene, cuándo se obtuvo y el SHA-256
 de lo que devolvió la fuente**.
 
 *Emporion* (ἐμπόριον): el puesto comercial de una ciudad griega, donde los mercaderes se reunían y
@@ -43,7 +43,7 @@ firmado.
 | `emporion.vat.check@v1` | $0.002 | ¿Es válido hoy este número de IVA de la UE? Nombre, dirección, hora de la consulta — y, si indica **su propio** número de IVA como solicitante, el **identificador de consulta** de VIES: prueba oficial de la comprobación a su nombre | EU VIES |
 | `emporion.lei.lookup@v1` | $0.001 | ¿Quién es esta entidad jurídica? Por LEI (dígitos de control verificados localmente) o por nombre (candidatos ordenados): denominación, jurisdicción, forma jurídica, estado, direcciones, renovación, matrices directa y última | GLEIF (CC0) |
 | `emporion.fx.rate@v1` | $0.001 | Tipo de referencia del euro para cualquier par en cualquier fecha desde 1999, el día del BCE al que corresponde, tipos cruzados a través del euro en Decimal, un importe redondeado a las unidades menores de la divisa | BCE |
-| `emporion.sanctions.screen@v1` | $0.002 | ¿Está esta dirección de monedero o este nombre en una lista pública de sanciones? OFAC SDN (unas 510 direcciones de moneda digital), listas de la UE y la ONU, con la fecha y el SHA-256 de cada lista | OFAC · UE · ONU |
+| `emporion.sanctions.screen@v1` | $0.002 | ¿Está esta dirección de monedero o este nombre en una lista pública de sanciones? OFAC SDN (unas 510 direcciones de moneda digital), listas de la UE y del Reino Unido (las designaciones de la ONU a través de ellas, cada coincidencia con su número de la ONU), con la fecha y el SHA-256 de cada lista | OFAC · UE · Reino Unido |
 | `emporion.timestamp.stamp@v1` | $0.001 | Anclar un resumen SHA-256 en Bitcoin mediante los calendarios de OpenTimestamps; devuelve una prueba `.ots` estándar | OpenTimestamps |
 | `emporion.timestamp.verify@v1` | $0.001 | Actualizar y verificar una prueba: confirmada cuando su resultado es igual a la raíz de Merkle de la cabecera del bloque de Bitcoin que EMPORION guarda tomada de la propia red Bitcoin (prueba de trabajo de cada cabecera comprobada, cadena confirmada por dos nodos) | Bitcoin |
 | `emporion.web.capture@v1` | $0.003 | Una página web como prueba: URL final, cada redirección, la IP, el estado, las cabeceras clave, el certificado TLS y el SHA-256 del cuerpo (y el cuerpo, hasta 512 KB); el SHA-256 del registro se ancla en Bitcoin | la propia página · OpenTimestamps |
@@ -63,7 +63,7 @@ flowchart LR
     N --> V[VIES]
     N --> G[GLEIF]
     N --> C[BCE]
-    N --> S[listas OFAC · UE · ONU<br/>actualizadas cada 6 h]
+    N --> S[listas OFAC · UE · Reino Unido<br/>actualizadas cada 6 h]
     N --> O[calendarios OpenTimestamps]
     E --> X[red P2P de Bitcoin<br/>cabeceras · prueba de trabajo comprobada]
     E -->|respuesta + pruebas:<br/>url · fetched_at · sha256| H
@@ -136,6 +136,15 @@ coincidió y su puntuación.
 **Una coincidencia es motivo para mirar más de cerca; su ausencia no es una autorización.** Los
 nombres se repiten y los alias son incompletos. Cada respuesta lo dice y nombra las listas usadas
 con sus fechas de publicación y SHA-256. Una lista desactualizada se rechaza, no se usa.
+
+**Las designaciones de la ONU llegan a través de las listas del Reino Unido y de la UE.** El archivo
+del propio Consejo de Seguridad no tiene licencia de reutilización, así que EMPORION no lo lee. La
+lista del Reino Unido (Open Government Licence v3.0) da a cada designación de la ONU que aplica su
+número de la ONU, como hace el archivo de la UE para algunas: una coincidencia lleva `un_ref`, y
+`lists: ["UN"]` consulta solo las entradas del Reino Unido y de la UE que lo tienen. El 17-10-2026
+las tres listas juntas contenían las 1010 entradas de la ONU (991 por número en la lista británica,
+el resto por nombre en las de la UE y OFAC). Las decisiones más recientes llegan con el retraso con
+que el Reino Unido y la UE las aplican, normalmente días.
 
 ### Sellos de tiempo
 
@@ -277,7 +286,7 @@ la ruta `/providers/emporion/` sigue siendo la dirección con la que federa el h
 | `ORACLE_PQC` | `1` en compose | firmas híbridas ML-DSA-65 |
 
 Pruebas: `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (en el monorepo:
-`-e ../oracles/core`) — 159 pruebas sobre extractos de respuestas reales, ninguna llega a una fuente
+`-e ../oracles/core`) — 160 pruebas sobre extractos de respuestas reales, ninguna llega a una fuente
 en vivo; en el monorepo la cadena canónica firmada se comprueba además byte a byte con la propia
 función del hub.
 
@@ -290,7 +299,7 @@ función del hub.
 | BCE | reproducción citando la fuente | Source: European Central Bank |
 | OFAC SDN | obra del Gobierno de EE. UU. (dominio público) | U.S. Department of the Treasury, OFAC |
 | Archivos de sanciones financieras de la UE | política de reutilización de la Comisión Europea | European Commission, FSF |
-| Lista consolidada de la ONU | información pública de la ONU | United Nations Security Council Consolidated List |
+| Lista de sanciones del Reino Unido (FCDO) | Open Government Licence v3.0 | Contains public sector information licensed under the Open Government Licence v3.0 (UK Sanctions List, FCDO) |
 | OpenTimestamps | calendarios públicos gratuitos | OpenTimestamps (opentimestamps.org) |
 | Cabeceras de bloques de Bitcoin | datos públicos de la cadena, obtenidos de nodo a nodo | Bitcoin network |
 | EORI de la UE (EOS) | política de reutilización de la Comisión Europea | European Commission, EORI validation (EOS) |

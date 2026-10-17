@@ -2,7 +2,7 @@
  *
  *  seal       the struck bronze coin in the middle: every answer leaves EMPORION signed
  *  beacons    the seven public sources on a ring around it — VIES, GLEIF, ECB, OFAC, the EU,
- *             the UN and Bitcoin
+ *             the UK (which carries the UN designations) and Bitcoin
  *  fact       a pulse of light from a source to the seal: one fetched answer
  *  receipt    the seal flashes and a ring runs out from it, with the evidence it carries — the
  *             list's SHA-256 for a sanctions list, "signed" for a per-call answer
@@ -32,7 +32,7 @@ const SOURCES = [
   { id: "ECB", label: "ECB", color: 0x8fd4ff },
   { id: "OFAC-SDN", label: "OFAC", color: 0xe8b85a, list: true },
   { id: "EU", label: "EU FSF", color: 0x8aa8ff, list: true },
-  { id: "UN", label: "UN", color: 0x62c6f0, list: true },
+  { id: "UK", label: "UK · UN", color: 0x62c6f0, list: true },
   { id: "BTC", label: "BITCOIN", color: 0xf7931a },
 ];
 

@@ -95,7 +95,7 @@ def test_sources_and_health(client):
     out = client.post("/ai-market/v2/invoke", json={
         "capability_id": "emporion.sources@v1", "input": {}}).json()["output"]
     ids = {s["id"] for s in out["sources"]}
-    assert ids == {"vies", "gleif", "ecb", "ofac", "eu_fsf", "un", "opentimestamps",
+    assert ids == {"vies", "gleif", "ecb", "ofac", "eu_fsf", "uk_fcdo", "opentimestamps",
                    "bitcoin_headers", "eos", "brreg", "recherche_entreprises", "ares",
                    "prh", "companies_house", "iana_rdap", "web", "holidays"}
     assert 200 < out["calendars"]["countries"] < 300 and "XECB" in out["calendars"]["markets"]

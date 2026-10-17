@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-10-17
+
+- UN Security Council designations now come through the UK Sanctions List (FCDO, Open Government
+  Licence v3.0), which gives each UN designation the UK implements its UN reference number, and
+  the EU list, which does for some. The UN's own file carries no reuse licence and is no longer
+  read. `sanctions.screen` lists are OFAC-SDN, EU and UK; every hit carries `un_ref` when its list
+  names one, and `lists: ["UN"]` screens the UK and EU entries that do. Measured on 2026-10-17:
+  the three lists held all 1010 UN entries (991 by UN number in the UK list, 19 by name in the EU
+  and OFAC lists); the newest UN decisions arrive with the UK's and the EU's delay.
+- The landing's live scene shows the UK list (with the UN) in place of the UN file.
+- 160 tests.
+
 ## 0.3.0 — 2026-10-17
 
 Every source on terms that allow selling the answer.

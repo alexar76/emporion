@@ -29,7 +29,7 @@
 An agent that buys, sells or pays needs facts no model can make up: is this VAT number valid,
 who is this company, what was the euro rate that day, is this wallet on a sanctions list, and
 can I prove this document existed yesterday. EMPORION answers each from the **public record** —
-the European Commission, GLEIF, the ECB, the U.S. Treasury, the EU, the UN and Bitcoin — and
+the European Commission, GLEIF, the ECB, the U.S. Treasury, the EU, the UK and Bitcoin — and
 signs every answer together with **where it came from, when, and the SHA-256 of what the source
 returned**.
 
@@ -48,7 +48,7 @@ switch, that calls the agent back with a signed event.
 | `emporion.vat.check@v1` | $0.002 | Is this EU VAT number valid today? Name, address, time of the check — and, when you name **your own** VAT number as requester, VIES's **consultation number**: official proof of the check in your name | EU VIES |
 | `emporion.lei.lookup@v1` | $0.001 | Who is this legal entity? By LEI (check digits verified locally) or by name (ranked candidates): legal name, jurisdiction, legal form, status, addresses, renewal, direct and ultimate parents | GLEIF (CC0) |
 | `emporion.fx.rate@v1` | $0.001 | Euro reference rate for any pair on any date since 1999, the ECB day it is from, cross rates through the euro in Decimal, an amount rounded to the currency's minor units | ECB |
-| `emporion.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~510 digital-currency addresses), EU and UN lists, with each list's date and SHA-256 | OFAC · EU · UN |
+| `emporion.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~510 digital-currency addresses), EU and UK lists (UN designations through them, each hit with its UN number), with each list's date and SHA-256 | OFAC · EU · UK |
 | `emporion.timestamp.stamp@v1` | $0.001 | Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; returns a standard `.ots` proof | OpenTimestamps |
 | `emporion.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of the Bitcoin block header EMPORION holds from the Bitcoin network itself (every header's proof of work checked, the chain agreed by two nodes) | Bitcoin |
 | `emporion.web.capture@v1` | $0.003 | A web page as evidence: final URL, every redirect, the IP, status, key headers, the TLS certificate and the SHA-256 of the body (and the body, up to 512 KB); the record's SHA-256 is anchored in Bitcoin | the page itself · OpenTimestamps |
@@ -68,7 +68,7 @@ flowchart LR
     N --> V[VIES]
     N --> G[GLEIF]
     N --> C[ECB]
-    N --> S[OFAC · EU · UN lists<br/>refreshed every 6 h]
+    N --> S[OFAC · EU · UK lists<br/>refreshed every 6 h]
     N --> O[OpenTimestamps calendars]
     E --> X[Bitcoin P2P network<br/>headers · proof of work checked]
     E -->|answer + evidence:<br/>url · fetched_at · sha256| H
@@ -137,6 +137,14 @@ which name matched and its score.
 **A hit is a reason to look closer; a miss is not a clearance.** Names collide and aliases are
 incomplete. Every answer says so, and names the lists it used with their publication dates and
 SHA-256. An outdated list is refused, not used.
+
+**UN designations come through the UK and EU lists.** The UN Security Council's own file carries
+no reuse licence, so EMPORION does not read it. The UK Sanctions List (Open Government Licence
+v3.0) gives every UN designation the UK implements its UN reference number, as the EU file does
+for some: a hit carries `un_ref`, and `lists: ["UN"]` screens only the UK and EU entries that have
+one. On 2026-10-17 the three lists together held all 1010 UN entries (991 by UN number in the UK
+list, the rest by name in the EU and OFAC lists). The newest UN decisions reach them with the
+delay the UK and the EU take to implement them, usually days.
 
 ### Timestamps
 
@@ -276,7 +284,7 @@ the `/providers/emporion/` path stays the address the hub federates with.
 | `ORACLE_PQC` | `1` in compose | hybrid ML-DSA-65 signatures |
 
 Tests: `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (in the monorepo:
-`-e ../oracles/core`) — 159 tests on excerpts of real answers, none reaching a live source; in the
+`-e ../oracles/core`) — 160 tests on excerpts of real answers, none reaching a live source; in the
 monorepo the signed canonical is also checked byte for byte against the hub's own function.
 
 ## Sources and licences
@@ -288,7 +296,7 @@ monorepo the signed canonical is also checked byte for byte against the hub's ow
 | ECB | reproduction with source acknowledgement | Source: European Central Bank |
 | OFAC SDN | U.S. Government work (public domain) | U.S. Department of the Treasury, OFAC |
 | EU Financial Sanctions Files | European Commission reuse policy | European Commission, FSF |
-| UN Consolidated List | UN public information | United Nations Security Council Consolidated List |
+| UK Sanctions List (FCDO) | Open Government Licence v3.0 | Contains public sector information licensed under the Open Government Licence v3.0 (UK Sanctions List, FCDO) |
 | OpenTimestamps | free public calendars | OpenTimestamps (opentimestamps.org) |
 | Bitcoin block headers | public chain data, fetched peer to peer | Bitcoin network |
 | EU EORI (EOS) | European Commission reuse policy | European Commission, EORI validation (EOS) |

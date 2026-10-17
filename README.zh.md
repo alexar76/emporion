@@ -21,7 +21,7 @@
 
 一个买入、卖出或付款的智能体，需要任何模型都编造不出的事实：这个增值税号有效吗？这家公司是谁？
 那天的欧元汇率是多少？这个钱包在制裁名单上吗？我能证明这份文件昨天就已存在吗？EMPORION 从
-**公共记录**——欧盟委员会、GLEIF、欧洲央行、美国财政部、欧盟、联合国和比特币——回答每一个问题，
+**公共记录**——欧盟委员会、GLEIF、欧洲央行、美国财政部、欧盟、英国和比特币——回答每一个问题，
 并在签名每个答案时附上**它来自哪里、何时获取，以及数据源返回内容的 SHA-256**。
 
 *Emporion*（ἐμπόριον）：古希腊城邦的商站，商人在那里会面并结算。
@@ -38,7 +38,7 @@
 | `emporion.vat.check@v1` | $0.002 | 这个欧盟增值税号今天有效吗？名称、地址、查询时间——如果把**你自己的**增值税号作为请求方，还会得到 VIES 的**查询编号**：以你的名义完成该查询的官方证明 | EU VIES |
 | `emporion.lei.lookup@v1` | $0.001 | 这个法人实体是谁？按 LEI（本地校验码验证）或按名称（排序后的候选）：法定名称、司法辖区、法律形式、状态、地址、续期、直接和最终母公司 | GLEIF（CC0） |
 | `emporion.fx.rate@v1` | $0.001 | 1999 年以来任意日期、任意货币对的欧元参考汇率，所属的欧洲央行日期，经欧元以 Decimal 计算的交叉汇率，按货币最小单位取整的金额 | 欧洲央行 |
-| `emporion.sanctions.screen@v1` | $0.002 | 这个钱包地址或名称在公开制裁名单上吗？OFAC SDN（约 510 个数字货币地址）、欧盟和联合国名单，附每份名单的日期和 SHA-256 | OFAC · 欧盟 · 联合国 |
+| `emporion.sanctions.screen@v1` | $0.002 | 这个钱包地址或名称在公开制裁名单上吗？OFAC SDN（约 510 个数字货币地址）、欧盟和英国名单（联合国制裁经由它们覆盖，每个命中附联合国编号），附每份名单的日期和 SHA-256 | OFAC · 欧盟 · 英国 |
 | `emporion.timestamp.stamp@v1` | $0.001 | 通过 OpenTimestamps 日历把 SHA-256 摘要锚定到比特币；返回标准 `.ots` 证明 | OpenTimestamps |
 | `emporion.timestamp.verify@v1` | $0.001 | 升级并验证证明：当其结果等于EMPORION 直接从比特币网络获取并保存的区块头的默克尔根时（逐一检查每个区块头的工作量证明，链经两个节点确认），即为已确认 | 比特币 |
 | `emporion.web.capture@v1` | $0.003 | 把网页作为证据：最终 URL、每次重定向、IP、状态码、关键响应头、TLS 证书和正文的 SHA-256（以及正文本身，最多 512 KB）；记录的 SHA-256 锚定到比特币 | 网页本身 · OpenTimestamps |
@@ -58,7 +58,7 @@ flowchart LR
     N --> V[VIES]
     N --> G[GLEIF]
     N --> C[欧洲央行]
-    N --> S[OFAC · 欧盟 · 联合国名单<br/>每 6 小时刷新]
+    N --> S[OFAC · 欧盟 · 英国名单<br/>每 6 小时刷新]
     N --> O[OpenTimestamps 日历]
     E --> X[比特币 P2P 网络<br/>区块头 · 已检查工作量证明]
     E -->|答案 + 证据：<br/>url · fetched_at · sha256| H
@@ -120,6 +120,12 @@ VIES 只向**作为请求方给出的有效欧盟增值税号**签发查询编�
 
 **命中是需要细看的理由；未命中不等于放行。** 名称会重名，别名并不完整。每个答案都会如此说明，并
 列出所用名单及其发布日期和 SHA-256。过期的名单会被拒绝，而不是被使用。
+
+**联合国制裁经由英国和欧盟名单覆盖。** 联合国安理会自己的文件没有再利用许可，因此 EMPORION 不读取
+它。英国制裁名单（Open Government Licence v3.0）为英国执行的每项联合国认定标注联合国编号，欧盟文件
+也为部分条目标注：命中会带有 `un_ref`，而 `lists: ["UN"]` 只筛查带编号的英国和欧盟条目。截至
+2026-10-17，三份名单合计包含全部 1010 条联合国条目（991 条按编号在英国名单中，其余按名称在欧盟和
+OFAC 名单中）。最新的联合国决定会随英国和欧盟的执行延迟进入名单，通常为几天。
 
 ### 时间戳
 
@@ -246,7 +252,7 @@ curl -s http://127.0.0.1:9351/health
 | `ORACLE_PQC` | compose 中为 `1` | 混合 ML-DSA-65 签名 |
 
 测试：`pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest`（在 monorepo 中用
-`-e ../oracles/core`）——159 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
+`-e ../oracles/core`）——160 个基于真实答案片段的测试，均不访问在线来源；在 monorepo 中，签名用的
 规范字符串还会与 Hub 自身的函数逐字节比对。
 
 ## 数据源与许可
@@ -258,7 +264,7 @@ curl -s http://127.0.0.1:9351/health
 | 欧洲央行 | 注明来源即可转载 | Source: European Central Bank |
 | OFAC SDN | 美国政府作品（公有领域） | U.S. Department of the Treasury, OFAC |
 | 欧盟金融制裁文件 | 欧盟委员会再利用政策 | European Commission, FSF |
-| 联合国综合名单 | 联合国公开信息 | United Nations Security Council Consolidated List |
+| 英国制裁名单（FCDO） | Open Government Licence v3.0 | Contains public sector information licensed under the Open Government Licence v3.0 (UK Sanctions List, FCDO) |
 | OpenTimestamps | 免费公共日历 | OpenTimestamps (opentimestamps.org) |
 | 比特币区块头 | 公开链数据，点对点获取 | Bitcoin network |
 | 欧盟 EORI（EOS） | 欧盟委员会再利用政策 | European Commission, EORI validation (EOS) |

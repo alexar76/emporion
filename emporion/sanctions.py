@@ -1,4 +1,4 @@
-"""Sanctions-list lookups: a wallet address or a name against OFAC SDN, the EU and the UN lists.
+"""Sanctions-list lookups: a wallet address or a name against OFAC SDN, the EU and the UK lists.
 
 An agent about to pay a wallet, or to sign with a counterparty, can ask whether the
 address or the name is on a public sanctions list. This is a LIST LOOKUP with the list
@@ -9,6 +9,12 @@ answer says so and names the lists, their publication dates and SHA-256.
 * Wallets: OFAC publishes digital-currency addresses in the SDN remarks (~510 on
   2026-10-16: XBT, ETH, TRX, USDT, USDC, …). Matched exactly; EVM and bech32 addresses
   case-insensitively, Base58 and others as written.
+* UN listings: the UN Security Council's own file carries no reuse licence, so it is not
+  read directly. The UK Sanctions List (Open Government Licence v3.0) gives each UN-derived
+  designation its UN reference number, as the EU file does for some; together with OFAC
+  they covered all 1010 UN entries on 2026-10-17 (991 by UN number in the UK list, the rest
+  by name in the EU and OFAC lists). A hit carries `un_ref` when its list names one, and
+  lists=["UN"] screens the UK and EU entries that do.
 * Names: every primary name and alias of the three lists, normalised (case, accents,
   punctuation; word order ignored, so "DOE, John" is "John Doe"), scored by token
   agreement with a small edit-distance allowance. Hits at or above the threshold
@@ -46,9 +52,11 @@ OFAC_SDN = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/e
 OFAC_ALT = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ALT.CSV"
 EU_FSF = ("https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/"
           "content?token=dG9rZW4tMjAxNw")
-UN_XML = "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
+UK_XML = "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"
 
-LISTS = ("OFAC-SDN", "EU", "UN")
+LISTS = ("OFAC-SDN", "EU", "UK")
+#: Not a list EMPORION reads: the UK and EU entries that carry a UN reference number.
+UN_VIEW = "UN"
 REFRESH_S = 6 * 3600
 #: How soon a missing or failed list is tried again. The EU file server answered 500 for
 #: hours on 2026-10-16; waiting the full REFRESH_S would refuse every full screen for 6 h.
@@ -76,9 +84,11 @@ class Entry:
     aliases: list[str] = field(default_factory=list)
     addresses: list[tuple[str, str]] = field(default_factory=list)
     listed_on: str | None = None
+    un_ref: str | None = None       # the UN Security Council reference, when the list gives one
 
     def public(self) -> dict[str, Any]:
         return {"list": self.list_name, "ref": self.ref, "name": self.name, "kind": self.kind,
+                "un_ref": self.un_ref,
                 "programs": self.programs, "aliases": self.aliases[:12],
                 "listed_on": self.listed_on,
                 "digital_currency_addresses": [{"asset": a, "address": x}
@@ -144,7 +154,8 @@ def parse_eu(got: Fetched) -> Snapshot:
         if event == "start" and tag == "export":
             published = (el.get("generationDate") or "")[:10] or None
         elif event == "start" and tag == "sanctionEntity":
-            cur = Entry("EU", el.get("euReferenceNumber") or el.get("logicalId") or "", "", "entity")
+            cur = Entry("EU", el.get("euReferenceNumber") or el.get("logicalId") or "", "", "entity",
+                        un_ref=(el.get("unitedNationId") or "").strip() or None)
         elif event == "end" and cur is not None:
             if tag == "nameAlias":
                 whole = (el.get("wholeName") or "").strip()
@@ -167,43 +178,58 @@ def parse_eu(got: Fetched) -> Snapshot:
     return Snapshot("EU", entries, [got], published, time.time())
 
 
-def parse_un(got: Fetched) -> Snapshot:
+_UK_KIND = {"Individual": "individual", "Entity": "entity", "Ship": "vessel"}
+
+
+def _uk_date(text: str | None) -> str | None:
+    """dd/mm/yyyy, as the UK list writes dates, to ISO."""
+    m = re.fullmatch(r"(\d{2})/(\d{2})/(\d{4})", (text or "").strip())
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def parse_uk(got: Fetched) -> Snapshot:
+    """The UK Sanctions List (FCDO), XML: one <Designation> per person, entity or ship."""
     entries: list[Entry] = []
     published = None
-    stack: list[dict[str, Any]] = []
+    rec: dict[str, Any] | None = None
+    name: dict[str, str] = {}
     for event, el in _xml_iter(got.body):
         tag = _local(el.tag)
         if event == "start":
-            if tag == "CONSOLIDATED_LIST":
-                published = (el.get("dateGenerated") or "")[:10] or None
-            if tag in ("INDIVIDUAL", "ENTITY"):
-                stack.append({"kind": "individual" if tag == "INDIVIDUAL" else "entity",
-                              "parts": {}, "aliases": [], "ref": "", "list": "", "listed": None})
+            if tag == "Designation":
+                rec = {"names": [], "programs": []}
+            elif tag == "Name" and rec is not None:
+                name = {}
             continue
-        if stack:
-            rec = stack[-1]
-            text = (el.text or "").strip()
-            if tag in ("FIRST_NAME", "SECOND_NAME", "THIRD_NAME", "FOURTH_NAME") and text:
-                rec["parts"][tag] = text
-            elif tag == "ALIAS_NAME" and text:
-                rec["aliases"].append(text)
-            elif tag == "REFERENCE_NUMBER":
-                rec["ref"] = text
-            elif tag == "UN_LIST_TYPE":
-                rec["list"] = text
-            elif tag == "LISTED_ON":
-                rec["listed"] = text or None
-            elif tag in ("INDIVIDUAL", "ENTITY"):
-                stack.pop()
-                parts = rec["parts"]
-                name = " ".join(parts[k] for k in ("FIRST_NAME", "SECOND_NAME", "THIRD_NAME",
-                                                   "FOURTH_NAME") if k in parts)
-                if name:
-                    entries.append(Entry("UN", rec["ref"], name, rec["kind"],
-                                         [rec["list"]] if rec["list"] else [],
-                                         rec["aliases"], [], rec["listed"]))
+        text = (el.text or "").strip()
+        if rec is None:
+            if tag == "DateGenerated":
+                published = _uk_date(text)
+        elif tag in ("Name1", "Name2", "Name3", "Name4", "Name5", "Name6") and text:
+            name[tag] = text
+        elif tag == "NameType":
+            name["type"] = text
+        elif tag == "Name":
+            full = " ".join(name[k] for k in ("Name1", "Name2", "Name3", "Name4", "Name5", "Name6")
+                            if k in name)
+            if full:
+                rec["names"].append((name.get("type", ""), " ".join(full.split())))
+        elif tag in ("UniqueID", "UNReferenceNumber", "IndividualEntityShip", "DateDesignated"):
+            rec[tag] = text
+        elif tag == "RegimeName" and text:
+            rec["programs"].append(text)
+        elif tag == "Designation":
+            names = rec["names"]
+            primary = next((n for t, n in names if t == "Primary Name"), names[0][1] if names else "")
+            if primary:
+                aliases = list(dict.fromkeys(n for _t, n in names if n != primary))
+                entries.append(Entry("UK", rec.get("UniqueID", ""), primary,
+                                     _UK_KIND.get(rec.get("IndividualEntityShip", ""), "entity"),
+                                     rec["programs"], aliases, [], _uk_date(rec.get("DateDesignated")),
+                                     (rec.get("UNReferenceNumber") or "").strip() or None))
+            rec = None
         el.clear()
-    return Snapshot("UN", entries, [got], published, time.time())
+    return Snapshot("UK", entries, [got], published, time.time())
 
 
 # ── The index ────────────────────────────────────────────────────────────────
@@ -243,8 +269,8 @@ class SanctionsService:
                 fetch(OFAC_ALT, source_id="ofac", max_bytes=32 << 20, timeout=120)),
             "EU": lambda: parse_eu(fetch(EU_FSF, source_id="eu_fsf", max_bytes=128 << 20,
                                          timeout=180)),
-            "UN": lambda: parse_un(fetch(UN_XML, source_id="un", max_bytes=32 << 20,
-                                         timeout=120)),
+            "UK": lambda: parse_uk(fetch(UK_XML, source_id="uk_fcdo", max_bytes=64 << 20,
+                                         timeout=180)),
         }
         self._snapshots: dict[str, Snapshot] = {}
         self._index: _Index | None = None
@@ -379,10 +405,21 @@ class SanctionsService:
     def screen(self, *, address: str | None = None, name: str | None = None,
                kind: str | None = None, lists: list[str] | None = None,
                threshold: float = DEFAULT_THRESHOLD, limit: int = 10) -> dict[str, Any]:
-        wanted = [str(x).upper() for x in (lists or LISTS)]
+        asked = [str(x).upper() for x in (lists or LISTS)]
+        explicit = set(asked)
+        wanted = list(dict.fromkeys(
+            [x for x in asked if x != UN_VIEW] + (["UK", "EU"] if UN_VIEW in explicit else [])))
+
+        def included(e: Entry) -> bool:
+            # The UN view: UK and EU entries that carry a UN reference number — unless that
+            # list was asked for in full as well.
+            if e.list_name not in wanted:
+                return False
+            return bool(e.un_ref) or e.list_name in explicit or UN_VIEW not in explicit
         bad = [x for x in wanted if x not in LISTS]
         if bad:
-            raise ValueError(f"unknown list(s) {bad}; lists are {', '.join(LISTS)}")
+            raise ValueError(f"unknown list(s) {bad}; lists are {', '.join(LISTS)} and UN "
+                             "(the UK and EU entries with a UN reference number)")
         if not address and not name:
             raise ValueError("pass address (a wallet) or name (a person or entity)")
         if not 0.7 <= float(threshold) <= 1.0:
@@ -393,7 +430,7 @@ class SanctionsService:
             key = norm_address(address)
             for i in index.by_address.get(key, []):
                 e = index.entries[i]
-                if e.list_name in wanted:
+                if included(e):
                     hits.append({"score": 1.0, "matched": "digital currency address",
                                  "entry": e.public()})
         if name:
@@ -411,7 +448,7 @@ class SanctionsService:
             for j in cand:
                 i, n, toks, nnorm = index.names[j]
                 e = index.entries[i]
-                if e.list_name not in wanted or (kind and e.kind != kind):
+                if not included(e) or (kind and e.kind != kind):
                     continue
                 s = score(q_toks, q_norm, toks, nnorm)
                 if s >= threshold and s > best.get(i, (0.0, ""))[0]:
@@ -419,7 +456,8 @@ class SanctionsService:
             for i, (s, n) in sorted(best.items(), key=lambda kv: -kv[1][0])[:max(1, min(50, limit))]:
                 hits.append({"score": s, "matched": n, "entry": index.entries[i].public()})
         return {
-            "query": {"address": address, "name": name, "kind": kind, "threshold": threshold},
+            "query": {"address": address, "name": name, "kind": kind, "threshold": threshold,
+                      "lists": asked},
             "listed": bool(hits),
             "hits": hits,
             "lists": [index.snapshots[n].meta() for n in wanted],
@@ -430,4 +468,4 @@ class SanctionsService:
 
 
 __all__ = ["DEFAULT_THRESHOLD", "Entry", "LISTS", "RETRY_S", "SanctionsService", "Snapshot", "norm_address",
-           "norm_name", "parse_eu", "parse_ofac", "parse_un", "score", "tokens"]
+           "norm_name", "parse_eu", "parse_ofac", "parse_uk", "score", "tokens"]

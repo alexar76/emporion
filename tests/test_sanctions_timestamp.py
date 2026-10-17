@@ -1,4 +1,4 @@
-"""Sanctions lists (real OFAC/EU/UN excerpts) and OpenTimestamps (the reference example proof)."""
+"""Sanctions lists (real OFAC/EU/UK excerpts) and OpenTimestamps (the reference example proof)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from emporion.sanctions import (
     norm_address,
     parse_eu,
     parse_ofac,
-    parse_un,
+    parse_uk,
 )
 
 
@@ -34,7 +34,7 @@ def snaps() -> dict[str, Snapshot]:
     return {
         "OFAC-SDN": parse_ofac(_fetched("ofac_sdn_excerpt.csv"), _fetched("ofac_alt_excerpt.csv")),
         "EU": parse_eu(_fetched("eu_fsf_excerpt.xml")),
-        "UN": parse_un(_fetched("un_excerpt.xml")),
+        "UK": parse_uk(_fetched("uk_excerpt.xml")),
     }
 
 
@@ -68,11 +68,26 @@ def test_eu_entities_carry_names_aliases_and_programmes(snaps):
     assert any(e.kind == "entity" for e in eu.entries)
 
 
-def test_un_individuals_and_entities(snaps):
-    un = snaps["UN"]
-    assert un.published == "2026-10-15"
-    assert {e.kind for e in un.entries} == {"individual", "entity"}
-    assert all(e.ref and e.programs for e in un.entries)
+def test_uk_designations_carry_their_un_numbers(snaps):
+    uk = snaps["UK"]
+    assert uk.published == "2026-10-16" and len(uk.entries) == 4
+    by = {e.ref: e for e in uk.entries}
+    akhund = by["AFG0006"]
+    assert akhund.name == "MOHAMMAD HASSAN AKHUND" and akhund.kind == "individual"
+    assert akhund.un_ref == "TAi.002" and akhund.listed_on == "2001-01-25" and akhund.programs
+    assert by["AFG0001"].un_ref == "TAe.010" and by["AFG0001"].kind == "entity"
+    assert len(by["AFG0001"].aliases) >= 5
+    assert by["RUS0251"].un_ref is None                      # a UK designation, not a UN one
+    assert by["DPR0075"].kind == "vessel"
+
+
+def test_the_un_view_screens_only_entries_with_a_un_number(svc):
+    hit = svc.screen(name="Mohammad Hassan Akhund", lists=["UN"])
+    assert hit["listed"] and hit["hits"][0]["entry"]["un_ref"] == "TAi.002"
+    assert [m["list"] for m in hit["lists"]] == ["UK", "EU"]
+    # Putin is on the UK list, but not by a UN decision.
+    assert svc.screen(name="Vladimir Putin", lists=["UN"])["listed"] is False
+    assert svc.screen(name="Vladimir Putin", lists=["UN", "UK"])["listed"] is True
 
 
 # ── screening ─────────────────────────────────────────────────────────────────
@@ -90,7 +105,7 @@ def test_a_listed_wallet_is_found_whatever_its_case(svc, snaps):
 def test_a_clean_wallet_is_not_listed_and_says_what_was_checked(svc):
     r = svc.screen(address="0x000000000000000000000000000000000000dEaD")
     assert r["listed"] is False and r["hits"] == []
-    assert [m["list"] for m in r["lists"]] == ["OFAC-SDN", "EU", "UN"]
+    assert [m["list"] for m in r["lists"]] == ["OFAC-SDN", "EU", "UK"]
     assert all(len(m["sha256"][0]) == 64 for m in r["lists"])
     assert "not a compliance determination" in r["note"]
 
@@ -107,9 +122,10 @@ def test_names_match_across_order_case_and_script(svc, name, min_score):
 
 def test_a_typo_plus_a_missing_patronymic_is_below_the_default_bar(svc):
     # A deliberate trade-off between recall and false alarms, documented here: the typo
-    # still finds OFAC's short alias, the EU's full name needs a lower threshold.
+    # still finds the short names (OFAC's alias, the UK's primary name), the EU's full name
+    # needs a lower threshold.
     default = svc.screen(name="Vladimir Puttin", kind="individual")
-    assert {h["entry"]["list"] for h in default["hits"]} == {"OFAC-SDN"}
+    assert {h["entry"]["list"] for h in default["hits"]} == {"OFAC-SDN", "UK"}
     lower = svc.screen(name="Vladimir Puttin", kind="individual", threshold=0.8)
     assert {"OFAC-SDN", "EU"} <= {h["entry"]["list"] for h in lower["hits"]}
 
@@ -125,8 +141,8 @@ def test_unrelated_names_are_not_hits(svc):
 
 
 def test_lists_and_kind_narrow_the_screen(svc):
-    only_un = svc.screen(name="Vladimir Putin", lists=["UN"])
-    assert only_un["listed"] is False and [m["list"] for m in only_un["lists"]] == ["UN"]
+    only_uk = svc.screen(name="Vladimir Putin", lists=["UK"])
+    assert only_uk["listed"] is True and [m["list"] for m in only_uk["lists"]] == ["UK"]
     assert svc.screen(name="Vladimir Putin", kind="entity")["listed"] is False
 
 
@@ -170,7 +186,7 @@ def test_status_reports_only_what_a_screen_can_use(snaps, monkeypatch):
 
     monkeypatch.setattr(mod, "_Index", index_being_built)
     s.refresh()
-    assert seen["lists"] == {"OFAC-SDN": None, "EU": None, "UN": None}
+    assert seen["lists"] == {"OFAC-SDN": None, "EU": None, "UK": None}
     assert all(s.status()["lists"].values())
     assert s.screen(name="Vladimir Putin")["listed"]
 
@@ -182,12 +198,12 @@ def test_a_failed_refresh_keeps_the_last_good_list(snaps):
         calls["n"] += 1
         if calls["n"] > 1:
             raise UpstreamError("down")
-        return snaps["UN"]
+        return snaps["UK"]
 
-    s = SanctionsService(loaders={"UN": flaky})
+    s = SanctionsService(loaders={"UK": flaky})
     assert s.refresh() == {}
-    assert "UN" in s.refresh()
-    assert s.status()["lists"]["UN"]["entries"] == 2 and "down" in s.status()["errors"]["UN"]
+    assert "UK" in s.refresh()
+    assert s.status()["lists"]["UK"]["entries"] == 4 and "down" in s.status()["errors"]["UK"]
 
 
 def _down():
@@ -216,13 +232,13 @@ def test_a_restart_during_an_outage_keeps_the_last_good_lists(snaps, tmp_path):
 
 
 def test_a_cached_list_past_48_hours_is_not_picked_up(snaps, tmp_path, monkeypatch):
-    SanctionsService(loaders={"UN": lambda: snaps["UN"]}, cache_dir=tmp_path).refresh()
+    SanctionsService(loaders={"UK": lambda: snaps["UK"]}, cache_dir=tmp_path).refresh()
     later = time.time() + 49 * 3600
     monkeypatch.setattr(time, "time", lambda: later)
-    s = SanctionsService(loaders={"UN": _down}, cache_dir=tmp_path)
+    s = SanctionsService(loaders={"UK": _down}, cache_dir=tmp_path)
     assert s.load_cache() == []
-    with pytest.raises(UpstreamError, match="not loaded yet: UN"):
-        s.screen(name="x", lists=["UN"])
+    with pytest.raises(UpstreamError, match="not loaded yet: UK"):
+        s.screen(name="x", lists=["UK"])
 
 
 def test_a_missing_list_is_retried_in_minutes_not_hours(snaps):
