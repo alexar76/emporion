@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.1 — 2026-10-24
+
+- **Fix: OFAC wallet screening missed more than half of the listed addresses.** OFAC cuts a
+  remark too long for `SDN.CSV` and continues it in `SDN_COMMENTS.CSV`, mid-word and sometimes
+  mid-address. EMPORION read only `SDN.CSV`: on 2026-10-24 it held 499 of the 1,050 listed
+  addresses, screened the other 538 (e.g. most of Garantex's, SUEX's and Hydra's) as not listed,
+  and kept 17 cut halves as if they were addresses. The comments file is now fetched with the
+  SDN list, joined to each remark before addresses are read, and a list load fails without it.
+  An OFAC snapshot cached by 0.4.0 (two files) is not served after the upgrade, and the CSV
+  files are read with any byte-order mark removed.
+  Reported by Vulnetix as GCVE-110-PYPI-2026-021807 (CWE-693); thank you.
+- 164 tests.
+
 ## 0.4.0 — 2026-10-17
 
 - UN Security Council designations now come through the UK Sanctions List (FCDO, Open Government

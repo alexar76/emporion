@@ -1,7 +1,8 @@
 Test fixtures: small excerpts of real upstream answers, fetched 2026-10-16.
 
 - `gleif_*.json` — GLEIF API (CC0).
-- `ofac_*_excerpt.csv` — OFAC SDN and ALT lists (U.S. Government work, public domain).
+- `ofac_*_excerpt.csv` — OFAC SDN, ALT and SDN_COMMENTS lists (U.S. Government work, public domain);
+  the GARANTEX EUROPE row and the comments excerpt were fetched 2026-10-24.
 - `eu_fsf_excerpt.xml` — EU Financial Sanctions Files (European Commission, reuse with acknowledgement).
 - `un_excerpt.xml` — UN Security Council Consolidated List.
 - `btc_358391_hash.txt` — the hash of Bitcoin block 358391 (public chain data).

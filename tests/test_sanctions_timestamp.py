@@ -32,7 +32,8 @@ def _fetched(name: str, url: str = "https://x/Published/a/2026-10-15/b/SDN.CSV")
 @pytest.fixture(scope="module")
 def snaps() -> dict[str, Snapshot]:
     return {
-        "OFAC-SDN": parse_ofac(_fetched("ofac_sdn_excerpt.csv"), _fetched("ofac_alt_excerpt.csv")),
+        "OFAC-SDN": parse_ofac(_fetched("ofac_sdn_excerpt.csv"), _fetched("ofac_alt_excerpt.csv"),
+                               _fetched("ofac_comments_excerpt.csv")),
         "EU": parse_eu(_fetched("eu_fsf_excerpt.xml")),
         "UK": parse_uk(_fetched("uk_excerpt.xml")),
     }
@@ -57,6 +58,23 @@ def test_ofac_rows_carry_kind_programs_aliases_and_wallets(snaps):
     assert ofac["MAR AZUL"].kind == "vessel"
     assert ofac["PUTIN, Vladimir Vladimirovich"].kind == "individual"
     assert sum(len(e.addresses) for e in ofac.values()) >= 6
+
+
+def test_ofac_remarks_continue_in_the_comments_file(snaps):
+    # Real rows (2026-10-24): SOUTHFRONT's last address is only in SDN_COMMENTS.CSV, and
+    # GARANTEX EUROPE's is cut in two between the files (GCVE-110-PYPI-2026-021807).
+    ofac = {e.name: e for e in snaps["OFAC-SDN"].entries}
+    assert ("BCH", "qq3vlashthktqpeppuv7trmw070e3mydgq63zq348v") in ofac["SOUTHFRONT"].addresses
+    garantex = [x for _, x in ofac["GARANTEX EUROPE OU"].addresses]
+    assert "TFwjPScaJRCbSWVAywE1S1WgaUgSnyYUbD" in garantex
+    assert "TFwjPScaJRCbSWVAywE1S1WgaU" not in garantex
+    assert {"TJkBr9TZ1xBeJoF7RNWqyEMbYqVJ6fXXHR", "TNDjh6WGLYyWmkh8vfu42bXVHUqFNQ3rDq"} <= set(garantex)
+    assert len(snaps["OFAC-SDN"].fetched) == 3
+
+
+def test_a_wallet_only_in_the_comments_file_is_a_hit(svc):
+    got = svc.screen(address="TFwjPScaJRCbSWVAywE1S1WgaUgSnyYUbD")
+    assert [h["entry"]["name"] for h in got["hits"]] == ["GARANTEX EUROPE OU"], got
 
 
 def test_eu_entities_carry_names_aliases_and_programmes(snaps):
@@ -363,3 +381,21 @@ def test_a_proof_naming_an_unknown_calendar_is_not_followed(upstream):
     out = timestamp.verify(digest, timestamp.stamp(digest)["proof"])
     assert out["calendars_asked"] == {"https://evil.example.com": "not on the allowlist; not asked"}
     assert not any("evil" in url for _m, url in upstream.calls)
+
+
+def test_an_ofac_list_cached_before_the_comments_file_is_not_served(snaps, tmp_path):
+    """0.4.0 saved OFAC from two files; after an upgrade that snapshot must not screen for up
+    to 48 h while the three-file refresh fails (independent review of -021807)."""
+    old = Snapshot("OFAC-SDN", snaps["OFAC-SDN"].entries, snaps["OFAC-SDN"].fetched[:2],
+                   snaps["OFAC-SDN"].published, time.time())
+    SanctionsService(loaders={"OFAC-SDN": lambda: old}, cache_dir=tmp_path).refresh()
+    s = SanctionsService(loaders={"OFAC-SDN": _down}, cache_dir=tmp_path)
+    assert s.load_cache() == []
+
+
+def test_a_byte_order_mark_does_not_drop_the_first_continuation():
+    sdn = (FIX / "ofac_sdn_excerpt.csv").read_bytes()
+    comments = "\ufeff".encode() + (FIX / "ofac_comments_excerpt.csv").read_bytes()
+    f = lambda body: Fetched("https://x/2026-10-15/a.csv", 200, body, "t", "h")  # noqa: E731
+    ofac = {e.name: e for e in parse_ofac(f(sdn), None, f(comments)).entries}
+    assert ("BCH", "qq3vlashthktqpeppuv7trmw070e3mydgq63zq348v") in ofac["SOUTHFRONT"].addresses

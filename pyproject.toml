@@ -2,7 +2,7 @@
 # (see oracles/core/pyproject.toml). Distribution name is always aimarket-*.
 [project]
 name = "aimarket-emporion"
-version = "0.4.0"
+version = "0.4.1"
 description = "EMPORION — public-record facts for agents that trade: EU VAT validity (VIES), legal entities (GLEIF LEI), national company registers, EORI, domain registrations (RDAP), ECB reference rates, sanctions-list lookups (OFAC, EU, UN), business-day calendars, Bitcoin-anchored timestamps (OpenTimestamps), web pages captured as evidence and timers with a dead man's switch, each answer signed with its sources"
 readme = "README.md"
 requires-python = ">=3.11"

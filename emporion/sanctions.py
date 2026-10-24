@@ -6,9 +6,11 @@ versions it used — not a compliance determination: names collide and aliases a
 incomplete, so a hit is a reason to look closer and a miss is not a clearance. Every
 answer says so and names the lists, their publication dates and SHA-256.
 
-* Wallets: OFAC publishes digital-currency addresses in the SDN remarks (~510 on
-  2026-10-16: XBT, ETH, TRX, USDT, USDC, …). Matched exactly; EVM and bech32 addresses
-  case-insensitively, Base58 and others as written.
+* Wallets: OFAC publishes digital-currency addresses in the SDN remarks (~1,050 on
+  2026-10-24: XBT, ETH, TRX, USDT, USDC, …). A remark too long for SDN.CSV is cut and
+  continues in SDN_COMMENTS.CSV, mid-word and sometimes mid-address; more than half of the
+  addresses are only there, so the two are joined before addresses are read. Matched
+  exactly; EVM and bech32 addresses case-insensitively, Base58 and others as written.
 * UN listings: the UN Security Council's own file carries no reuse licence, so it is not
   read directly. The UK Sanctions List (Open Government Licence v3.0) gives each UN-derived
   designation its UN reference number, as the EU file does for some; together with OFAC
@@ -50,6 +52,9 @@ log = logging.getLogger("emporion.sanctions")
 
 OFAC_SDN = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV"
 OFAC_ALT = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ALT.CSV"
+#: Continuations of remarks too long for SDN.CSV (Vulnetix GCVE-110-PYPI-2026-021807).
+OFAC_COMMENTS = ("https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/"
+                 "SDN_COMMENTS.CSV")
 EU_FSF = ("https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/"
           "content?token=dG9rZW4tMjAxNw")
 UK_XML = "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"
@@ -114,9 +119,17 @@ class Snapshot:
 # ── Parsers ──────────────────────────────────────────────────────────────────
 
 
-def parse_ofac(sdn: Fetched, alt: Fetched | None) -> Snapshot:
+def parse_ofac(sdn: Fetched, alt: Fetched | None, comments: Fetched | None = None) -> Snapshot:
+    # SDN.CSV cuts a long remark at a fixed width and SDN_COMMENTS.CSV carries the rest, with
+    # no separator: the cut can fall inside a wallet address, so the text is joined first.
+    more: dict[str, str] = defaultdict(str)
+    if comments is not None:
+        for row in csv.reader(io.StringIO(comments.body.decode("utf-8-sig", "replace"))):
+            if len(row) >= 2 and row[0].strip().isdigit():
+                more[row[0].strip()] += row[1]
     entries: dict[str, Entry] = {}
-    for row in csv.reader(io.StringIO(sdn.body.decode("utf-8", "replace"))):
+    # utf-8-sig: a byte-order mark would make the first id "\ufeff1", not a number, and drop it.
+    for row in csv.reader(io.StringIO(sdn.body.decode("utf-8-sig", "replace"))):
         if len(row) < 12 or not row[0].strip().isdigit():
             continue
         clean = [c.strip() if c.strip() != "-0-" else "" for c in row]
@@ -124,14 +137,15 @@ def parse_ofac(sdn: Fetched, alt: Fetched | None) -> Snapshot:
                 "aircraft": "aircraft"}.get(clean[2].lower(), "entity")
         e = Entry("OFAC-SDN", clean[0], clean[1], kind,
                   [p for p in re.split(r"[\]\[;\s]+", clean[3]) if p])
-        e.addresses = [(a.upper(), x) for a, x in _ADDR.findall(clean[11])]
+        remarks = row[11] + more.get(clean[0], "")
+        e.addresses = [(a.upper(), x) for a, x in _ADDR.findall(remarks)]
         entries[clean[0]] = e
     if alt is not None:
-        for row in csv.reader(io.StringIO(alt.body.decode("utf-8", "replace"))):
+        for row in csv.reader(io.StringIO(alt.body.decode("utf-8-sig", "replace"))):
             if len(row) >= 4 and row[0].strip() in entries and row[3].strip() not in ("", "-0-"):
                 entries[row[0].strip()].aliases.append(row[3].strip())
     m = re.search(r"/(\d{4}-\d{2}-\d{2})/", sdn.url)
-    return Snapshot("OFAC-SDN", list(entries.values()), [f for f in (sdn, alt) if f],
+    return Snapshot("OFAC-SDN", list(entries.values()), [f for f in (sdn, alt, comments) if f],
                     m.group(1) if m else None, time.time())
 
 
@@ -266,7 +280,8 @@ class SanctionsService:
         self.loaders = loaders or {
             "OFAC-SDN": lambda: parse_ofac(
                 fetch(OFAC_SDN, source_id="ofac", max_bytes=64 << 20, timeout=120),
-                fetch(OFAC_ALT, source_id="ofac", max_bytes=32 << 20, timeout=120)),
+                fetch(OFAC_ALT, source_id="ofac", max_bytes=32 << 20, timeout=120),
+                fetch(OFAC_COMMENTS, source_id="ofac", max_bytes=16 << 20, timeout=120)),
             "EU": lambda: parse_eu(fetch(EU_FSF, source_id="eu_fsf", max_bytes=128 << 20,
                                          timeout=180)),
             "UK": lambda: parse_uk(fetch(UK_XML, source_id="uk_fcdo", max_bytes=64 << 20,
@@ -316,6 +331,11 @@ class SanctionsService:
             try:
                 doc = json.loads(gzip.decompress(path.read_bytes()))
                 if (time.time() - float(doc["loaded_at"])) / 3600 > MAX_AGE_H:
+                    continue
+                if name == "OFAC-SDN" and len(doc["fetched"]) < 3:
+                    # Saved before 0.4.1 (SDN and ALT, no SDN_COMMENTS.CSV): it lacks over half
+                    # of the listed wallets, so it is not served; the list loads fresh instead.
+                    log.warning("cached OFAC list predates SDN_COMMENTS.CSV; not used")
                     continue
                 snap = Snapshot(
                     list_name=name,
