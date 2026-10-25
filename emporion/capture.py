@@ -86,10 +86,20 @@ class _HostLimiter:
 LIMITER = _HostLimiter(PER_HOST_PER_MINUTE)
 
 
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
 def _public(ip: str) -> bool:
+    """Global, and so is any IPv4 address it carries: IPv4-mapped, 6to4 (2002::/16) and
+    NAT64 (64:ff9b::/96, where 64:ff9b::a00:5 is 10.0.0.5) all reach that IPv4 address on a
+    host that routes them, and Python calls the NAT64 form global."""
     addr = ipaddress.ip_address(ip.split("%")[0])
-    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
-        addr = addr.ipv4_mapped
+    if isinstance(addr, ipaddress.IPv6Address):
+        embedded = addr.ipv4_mapped or addr.sixtofour
+        if embedded is None and addr in _NAT64:
+            embedded = ipaddress.IPv4Address(int(addr) & 0xFFFFFFFF)
+        if embedded is not None:
+            return embedded.is_global and not embedded.is_multicast
     return addr.is_global and not addr.is_multicast
 
 

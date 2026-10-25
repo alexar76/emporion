@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — 2026-10-25
+
+- **Fix: page capture accepted IPv6 addresses that carry a private IPv4 one.** The capture guard
+  unwrapped IPv4-mapped addresses only, so a name answering with a NAT64 (`64:ff9b::a00:5`, which
+  Python calls global) or 6to4 (`2002::/16`) form of a private or metadata address passed. Both are
+  now judged by the IPv4 address inside, as signal-hunt 0.1.2 does after Vulnetix
+  GCVE-110-PYPI-2026-021946.
+
 ## 0.4.1 — 2026-10-24
 
 - **Fix: OFAC wallet screening missed more than half of the listed addresses.** OFAC cuts a

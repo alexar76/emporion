@@ -118,7 +118,9 @@ def test_urls_that_cannot_be_captured(web, url, why):
 
 
 @pytest.mark.parametrize("addr", ["127.0.0.1", "10.1.2.3", "169.254.169.254", "100.64.0.1",
-                                  "::1", "fd00::1", "::ffff:192.168.1.1", "224.0.0.1"])
+                                  "::1", "fd00::1", "::ffff:192.168.1.1", "224.0.0.1",
+                                  # NAT64 (Python calls it global) and 6to4 forms of private IPv4
+                                  "64:ff9b::7f00:1", "64:ff9b::a00:5", "2002:a9fe:a9fe::"])
 def test_a_name_resolving_to_a_private_address_is_refused(web, addr):
     web.dns["rebind.example"] = ["93.184.216.34", addr]
     with pytest.raises(ValueError, match="non-public address"):

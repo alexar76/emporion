@@ -396,6 +396,7 @@ def test_an_ofac_list_cached_before_the_comments_file_is_not_served(snaps, tmp_p
 def test_a_byte_order_mark_does_not_drop_the_first_continuation():
     sdn = (FIX / "ofac_sdn_excerpt.csv").read_bytes()
     comments = "\ufeff".encode() + (FIX / "ofac_comments_excerpt.csv").read_bytes()
-    f = lambda body: Fetched("https://x/2026-10-15/a.csv", 200, body, "t", "h")  # noqa: E731
+    def f(body: bytes) -> Fetched:
+        return Fetched("https://x/2026-10-15/a.csv", 200, body, "t", "h")
     ofac = {e.name: e for e in parse_ofac(f(sdn), None, f(comments)).entries}
     assert ("BCH", "qq3vlashthktqpeppuv7trmw070e3mydgq63zq348v") in ofac["SOUTHFRONT"].addresses
