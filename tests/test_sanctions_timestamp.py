@@ -11,10 +11,10 @@ import httpx
 import pytest
 
 from conftest import FIX
-from emporion import timestamp
-from emporion.names import similarity
-from emporion.net import Fetched, UpstreamError
-from emporion.sanctions import (
+from symmartys import timestamp
+from symmartys.names import similarity
+from symmartys.net import Fetched, UpstreamError
+from symmartys.sanctions import (
     SanctionsService,
     Snapshot,
     norm_address,
@@ -190,7 +190,7 @@ def test_an_outdated_list_is_refused_not_used(svc, monkeypatch):
 def test_status_reports_only_what_a_screen_can_use(snaps, monkeypatch):
     """Lists fetched but not yet indexed are not "loaded": /health used to say all three were
     while screens refused them."""
-    import emporion.sanctions as mod
+    import symmartys.sanctions as mod
 
     s = SanctionsService(loaders={k: (lambda v=v: v) for k, v in snaps.items()})
     seen = {}
@@ -260,7 +260,7 @@ def test_a_cached_list_past_48_hours_is_not_picked_up(snaps, tmp_path, monkeypat
 
 
 def test_a_missing_list_is_retried_in_minutes_not_hours(snaps):
-    from emporion.sanctions import REFRESH_S, RETRY_S
+    from symmartys.sanctions import REFRESH_S, RETRY_S
 
     s = SanctionsService(loaders={"OFAC-SDN": lambda: snaps["OFAC-SDN"], "EU": _down})
     assert s.next_wait() == RETRY_S                            # nothing loaded yet
@@ -288,7 +288,7 @@ HEADERS_358 = (FIX / "btc_headers_356832_358391.bin").read_bytes()
 
 
 def _chain(agreed: int = 358391):
-    from emporion.bitcoin_headers import HeaderChain
+    from symmartys.bitcoin_headers import HeaderChain
 
     hs = [HEADERS_358[i:i + 80] for i in range(0, len(HEADERS_358), 80)]
     chain = HeaderChain(anchor_height=356832, anchor=hs[0])

@@ -1,7 +1,7 @@
 """Bitcoin-anchored timestamps (OpenTimestamps): prove a digest existed by a block's time.
 
 An agent that produced a report, a contract or a dataset can prove later that it
-existed at a moment, without trusting EMPORION or anyone else: the proof ends in a
+existed at a moment, without trusting SYMMARTYS or anyone else: the proof ends in a
 Bitcoin block header.
 
 stamp   The caller's SHA-256 digest gets a random 16-byte nonce appended and is hashed
@@ -11,7 +11,7 @@ stamp   The caller's SHA-256 digest gets a random 16-byte nonce appended and is 
         a few hours, when the calendars' aggregate transaction is mined.
 
 verify  The proof is upgraded at each calendar it names (only calendars on the
-        allowlist are asked), and every Bitcoin attestation is checked against EMPORION's
+        allowlist are asked), and every Bitcoin attestation is checked against SYMMARTYS's
         own copy of the Bitcoin header chain (bitcoin_headers.py: fetched from the Bitcoin
         P2P network, every header's proof of work and difficulty checked, agreed by a
         second node on another network): the header at that height must have the proof's
@@ -19,7 +19,7 @@ verify  The proof is upgraded at each calendar it names (only calendars on the
         block's time. No block explorer is asked.
 
 Proof format and operations come from the OpenTimestamps reference library; all HTTP
-is EMPORION's own (allowlisted, size-capped).
+is SYMMARTYS's own (allowlisted, size-capped).
 """
 
 from __future__ import annotations
@@ -42,9 +42,9 @@ from opentimestamps.core.serialize import (
 )
 from opentimestamps.core.timestamp import DetachedTimestampFile, Timestamp
 
-from emporion.bitcoin_headers import HeaderChain
-from emporion.net import UpstreamError, fetch
-from emporion.sources import source
+from symmartys.bitcoin_headers import HeaderChain
+from symmartys.net import UpstreamError, fetch
+from symmartys.sources import source
 
 CALENDARS = (
     "https://a.pool.opentimestamps.org",
@@ -78,7 +78,7 @@ def _deserialize_proof(proof_b64: str) -> DetachedTimestampFile:
     except ValueError as exc:
         raise ValueError("proof must be base64 of a .ots file") from exc
     if len(raw) > MAX_PROOF_BYTES:
-        raise ValueError("proof is larger than any .ots file EMPORION issues")
+        raise ValueError("proof is larger than any .ots file SYMMARTYS issues")
     try:
         return DetachedTimestampFile.deserialize(StreamDeserializationContext(io.BytesIO(raw)))
     except (DeserializationError, ValueError, EOFError, TypeError) as exc:
@@ -123,7 +123,7 @@ def stamp(hex_digest: str, *, calendars: tuple[str, ...] = CALENDARS) -> dict[st
         "proof_sha256": hashlib.sha256(proof).hexdigest(),
         "calendars": accepted,
         "submitted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "next": "call emporion.timestamp.verify@v1 with digest and proof after a few hours "
+        "next": "call symmartys.timestamp.verify@v1 with digest and proof after a few hours "
                 "to receive the Bitcoin-confirmed proof",
         "note": "the calendars saw only sha256(digest || 16 random bytes), never the digest",
     }
@@ -135,7 +135,7 @@ def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True,
     chain = headers or HEADERS
     dtf = _deserialize_proof(proof_b64)
     if not isinstance(dtf.file_hash_op, OpSHA256):
-        raise ValueError("EMPORION verifies SHA-256 proofs")
+        raise ValueError("SYMMARTYS verifies SHA-256 proofs")
     if dtf.file_digest != digest:
         raise ValueError("the proof is for a different digest")
     before = _serialize(dtf)
@@ -169,7 +169,7 @@ def verify(hex_digest: str, proof_b64: str, *, upgrade: bool = True,
         if not isinstance(att, BitcoinBlockHeaderAttestation):
             continue
         if chain is None:
-            raise UpstreamError("EMPORION's Bitcoin header chain is not loaded; nothing "
+            raise UpstreamError("SYMMARTYS's Bitcoin header chain is not loaded; nothing "
                                 "charged, retry shortly")
         block = chain.block(int(att.height))
         if block["merkle_root"] != msg:

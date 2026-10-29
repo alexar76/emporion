@@ -1,6 +1,6 @@
-/** EMPORION hero — the trading post at night, drawn as what the service does.
+/** SYMMARTYS hero — a field of corroborating public records at night, drawn as what the service does.
  *
- *  seal       the struck bronze coin in the middle: every answer leaves EMPORION signed
+ *  seal       the struck bronze coin in the middle: every answer leaves SYMMARTYS signed
  *  beacons    the seven public sources on a ring around it — VIES, GLEIF, ECB, OFAC, the EU,
  *             the UK (which carries the UN designations) and Bitcoin
  *  fact       a pulse of light from a source to the seal: one fetched answer
@@ -8,7 +8,7 @@
  *             list's SHA-256 for a sanctions list, "signed" for a per-call answer
  *  chain      Bitcoin blocks drifting behind; now and then the seal anchors a digest in one
  *
- * LIVE when the running service answers emporion.sources@v1: the beacons of the sanctions lists
+ * LIVE when the running service answers symmartys.sources@v1: the beacons of the sanctions lists
  * it holds are lit, their receipts carry the lists' real SHA-256, and the badge names the lists
  * with their entry counts. ILLUSTRATION otherwise — badged as such, with made-up hashes, because a
  * picture of evidence is not evidence.
@@ -20,10 +20,10 @@ import { UnrealBloomPass } from "./vendor/three/addons/postprocessing/UnrealBloo
 import { OutputPass } from "./vendor/three/addons/postprocessing/OutputPass.js";
 
 // On its own domain the page asks itself; the GitHub Pages copy asks the live service (CORS
-// allows alexar76.github.io); a local copy asks a local EMPORION.
+// allows alexar76.github.io); a local copy asks a local SYMMARTYS.
 const HOST = location.hostname;
 const API = /^(localhost|127\.0\.0\.1)$/.test(HOST) ? "http://127.0.0.1:9351"
-  : HOST === "emporion.modelmarket.dev" ? "" : "https://emporion.modelmarket.dev";
+  : HOST === "symmartys.modelmarket.dev" ? "" : "https://symmartys.modelmarket.dev";
 
 const BRONZE = 0xd9a441;
 const SOURCES = [
@@ -46,7 +46,7 @@ async function fetchLive() {
     const res = await fetch(`${API}/ai-market/v2/invoke`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ capability_id: "emporion.sources@v1", input: {} }),
+      body: JSON.stringify({ capability_id: "symmartys.sources@v1", input: {} }),
       signal: ctrl.signal,
     });
     if (!res.ok) return null;
@@ -118,7 +118,7 @@ function coinFace() {
       g.restore();
     }
     // Lettering round the field: the Greek word and the Latin name.
-    const text = "ἘΜΠΌΡΙΟΝ · EMPORION · ";
+    const text = "ΣΥΜΜΆΡΤΥΣ · SYMMARTYS · ";
     g.font = `600 ${Math.round(s * 0.05)}px Syne, Georgia, serif`;
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -535,6 +535,6 @@ export function mountAgora(canvas, { reducedMotion = false, onLive = () => {} } 
       renderer.dispose();
     },
   };
-  window.__emporion_agora = handle;
+  window.__symmartys_agora = handle;
   return handle;
 }

@@ -1,20 +1,20 @@
-# Satellite image for alexar76/emporion (build context = this repository's root).
+# Standalone SYMMARTYS image (build context = this product directory).
 # oracle-core is vendored at mirror time into vendor/oracle-core/.
-# The monorepo deploy still uses emporion/Dockerfile from the aicom root.
-#     docker build -f Dockerfile.standalone -t emporion .
+# The monorepo deploy still uses symmartys/Dockerfile from the aicom root.
+#     docker build -f Dockerfile.standalone -t symmartys .
 ARG PYTHON_IMAGE=python:3.11-slim
 FROM ${PYTHON_IMAGE}
 
-LABEL org.opencontainers.image.title="EMPORION"
+LABEL org.opencontainers.image.title="SYMMARTYS"
 LABEL org.opencontainers.image.description="Public-record facts for agents that trade: EU VAT (VIES), GLEIF LEI, ECB rates, OFAC/EU/UN sanctions lists and OpenTimestamps, every answer signed with its sources"
-LABEL org.opencontainers.image.source="https://github.com/alexar76/emporion"
+LABEL org.opencontainers.image.source="https://github.com/alexar76/aicom"
 LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
 COPY vendor/oracle-core /app/oracle-core
 COPY pyproject.toml README.md LICENSE ./
-COPY emporion ./emporion
+COPY symmartys ./symmartys
 
 RUN pip install --no-cache-dir -e "/app/oracle-core[pqc,postgres]" -e . \
     && mkdir -p /data && chown -R 10001:10001 /data
@@ -22,12 +22,12 @@ RUN pip install --no-cache-dir -e "/app/oracle-core[pqc,postgres]" -e . \
 EXPOSE 9351
 # Not root: the signing key lives in /data, owned by uid 10001.
 ENV HOME=/tmp \
-    EMPORION_PORT=9351 \
-    EMPORION_SIGNING_KEY_PATH=/data/emporion_signing_key \
+    SYMMARTYS_PORT=9351 \
+    SYMMARTYS_STATE_DIR=/data \
     ORACLE_CALLS=1 \
     ORACLE_DATA_DIR=/data
 USER 10001:10001
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9351/health', timeout=4).status == 200 else 1)"
-CMD ["python", "-m", "emporion.main"]
+CMD ["python", "-m", "symmartys.main"]

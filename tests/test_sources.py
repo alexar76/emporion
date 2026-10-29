@@ -10,9 +10,9 @@ import zipfile
 import pytest
 
 from conftest import FIX
-from emporion import lei, vat
-from emporion.fx import HIST_URL, FxService
-from emporion.net import UpstreamError, fetch
+from symmartys import lei, vat
+from symmartys.fx import HIST_URL, FxService
+from symmartys.net import UpstreamError, fetch
 
 VIES = "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number"
 GLEIF = "https://api.gleif.org/api/v1"
@@ -246,7 +246,7 @@ def test_fx_amount_must_be_a_number(fx):
 
 def test_a_failed_refresh_keeps_the_last_table(fx, upstream, monkeypatch):
     fx.table()
-    import emporion.fx as fxmod
+    import symmartys.fx as fxmod
 
     monkeypatch.setattr(fxmod, "REFRESH_S", -1)
     upstream.on("GET", HIST_URL, 404)

@@ -15,7 +15,7 @@ with no RDAP service in IANA's file (some country codes still have none) cannot 
 looked up, and that costs nothing.
 
 Registries' terms of service forbid high-volume automated querying and repackaging of
-their data. So EMPORION asks one registry at most PER_HOST_PER_MINUTE times a minute,
+their data. So SYMMARTYS asks one registry at most PER_HOST_PER_MINUTE times a minute,
 keeps each answer CACHE_TTL_S (an hour for "not registered"; registration data changes
 rarely; a cached answer says so
 and keeps the original fetch time in its evidence), and passes the registry's own notices
@@ -33,8 +33,8 @@ from collections import OrderedDict, deque
 from typing import Any
 from urllib.parse import urlsplit
 
-from emporion import sources
-from emporion.net import UpstreamError, fetch
+from symmartys import sources
+from symmartys.net import UpstreamError, fetch
 
 BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 BOOTSTRAP_TTL_S = 24 * 3600
@@ -127,7 +127,7 @@ class _Gate:
                 q.popleft()
             if len(q) >= PER_HOST_PER_MINUTE:
                 wait = int(60 - (now - q[0])) + 1
-                raise UpstreamError(f"EMPORION asks {host} at most {PER_HOST_PER_MINUTE} times a "
+                raise UpstreamError(f"SYMMARTYS asks {host} at most {PER_HOST_PER_MINUTE} times a "
                                     f"minute, as registries' terms require; retry in {wait} s, "
                                     "nothing charged")
             q.append(now)
@@ -203,7 +203,7 @@ def _fetch(name: str, bootstrap: Bootstrap, gate: _Gate) -> dict[str, Any]:
         raise ValueError(f".{labels[-1]} publishes no RDAP service in IANA's bootstrap; "
                          "nothing charged")
     if not base:
-        raise ValueError(f".{tld}'s RDAP service is plain http only; EMPORION asks over "
+        raise ValueError(f".{tld}'s RDAP service is plain http only; SYMMARTYS asks over "
                          "https alone. Nothing charged")
     # IANA lists TLDs, not the second levels some registries sell under (co.uk, com.au),
     # so the registrable name is found by asking: the longest candidate first, down to one

@@ -7,8 +7,8 @@ import json
 import pytest
 
 from conftest import FIX
-from emporion import eori, rdap, registries, sources, workdays
-from emporion.net import UpstreamError, fetch
+from symmartys import eori, rdap, registries, sources, workdays
+from symmartys.net import UpstreamError, fetch
 
 BOOT = {"publication": "2026-09-30T23:00:03Z", "services": [
     [["com", "net"], ["https://rdap.verisign.com/com/v1/"]],

@@ -13,8 +13,8 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from emporion.names import similarity
-from emporion.net import UpstreamError, fetch
+from symmartys.names import similarity
+from symmartys.net import UpstreamError, fetch
 
 API = "https://api.gleif.org/api/v1"
 _LEI = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
@@ -98,7 +98,7 @@ def lookup(lei: str | None = None, name: str | None = None, *, limit: int = 5,
     want = max(1, min(10, limit))
     # Two GLEIF searches, ranked here: fuzzy completion finds near spellings, the names
     # filter finds the full legal names fuzzy completion drops ("Deutsche Bank" →
-    # "Deutsche Bank Aktiengesellschaft"). Ranking is EMPORION's own (names.py), with
+    # "Deutsche Bank Aktiengesellschaft"). Ranking is SYMMARTYS's own (names.py), with
     # active, issued registrations first among equals.
     fuzzy = _get(f"/fuzzycompletions?field=entity.legalName&q={quote(query)}")
     ids: list[str] = []

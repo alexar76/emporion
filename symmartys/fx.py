@@ -23,7 +23,7 @@ from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from typing import Any
 
-from emporion.net import Fetched, UpstreamError, fetch
+from symmartys.net import Fetched, UpstreamError, fetch
 
 HIST_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip"
 REFRESH_S = 3 * 3600

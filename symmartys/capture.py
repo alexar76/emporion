@@ -1,7 +1,7 @@
 """A web page as evidence: what a URL answered, when, from which server, anchored in Bitcoin.
 
 An agent that buys on a seller's word needs to prove later what the page said: the price,
-the delivery terms, the refund policy. EMPORION fetches the URL once, as a browser would,
+the delivery terms, the refund policy. SYMMARTYS fetches the URL once, as a browser would,
 and returns a record of the answer — the final URL after redirects, every hop, the IP it
 connected to, the HTTP status, the headers that matter, the TLS certificate the server
 presented, and the SHA-256 of the body — together with the body itself when it is small
@@ -19,7 +19,7 @@ through net.py's source allowlist. Instead:
   * every redirect hop is checked the same way, at most MAX_REDIRECTS;
   * the body is capped at MAX_BODY_BYTES and the whole capture at DEADLINE_S;
   * no cookies, no proxy from the environment, an honest User-Agent;
-  * at most PER_HOST_PER_MINUTE captures of one host per minute, so EMPORION is no one's
+  * at most PER_HOST_PER_MINUTE captures of one host per minute, so SYMMARTYS is no one's
     load generator.
 
 A page that answers 404 or 500 is a capture (the page said that at that moment); a host
@@ -44,8 +44,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
-from emporion import timestamp
-from emporion.net import USER_AGENT, UpstreamError
+from symmartys import timestamp
+from symmartys.net import USER_AGENT, UpstreamError
 
 MAX_URL = 2048
 MAX_REDIRECTS = 5
@@ -284,19 +284,19 @@ def capture(url: str, *, include_body: bool = True, anchor: bool = True,
             got = (stamp or timestamp.stamp)(record_sha256)
             out["anchor"] = {"status": got["status"], "proof": got["proof"],
                              "calendars": got["calendars"],
-                             "next": "emporion.timestamp.verify@v1 with digest=record_sha256 "
+                             "next": "symmartys.timestamp.verify@v1 with digest=record_sha256 "
                                      "and this proof, after a few hours"}
         except UpstreamError as exc:
             out["anchor"] = {"status": "unavailable", "reason": str(exc)[:200],
                              "next": "the record is still signed by the hub's receipt; anchor "
-                                     "record_sha256 later with emporion.timestamp.stamp@v1"}
+                                     "record_sha256 later with symmartys.timestamp.stamp@v1"}
     else:
         out["anchor"] = None
     out["how_to_verify"] = ("sha256 of base64-decoded body_b64 equals record.body_sha256; "
                             "sha256 of the record as JSON with sorted keys, separators (',', "
                             "':') and UTF-8 equals record_sha256; the anchor proof commits "
                             "record_sha256 to a Bitcoin block")
-    out["note"] = ("what this server answered EMPORION at captured_at — a capture, not a "
+    out["note"] = ("what this server answered SYMMARTYS at captured_at — a capture, not a "
                    "statement that the content is true; another visitor may be shown "
                    "another page")
     return out

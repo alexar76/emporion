@@ -47,7 +47,7 @@ class Upstream:
 @pytest.fixture
 def upstream(monkeypatch):
     up = Upstream()
-    import emporion.net as net
+    import symmartys.net as net
 
     monkeypatch.setattr(net.httpx, "stream", up.stream)
     monkeypatch.setattr(net.time, "sleep", lambda s: None)

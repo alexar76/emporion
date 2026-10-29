@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 — 2026-10-28
+
+- Rename this ecosystem product to **SYMMARTYS** (συμμάρτυς, a joint or corroborating
+  witness): distribution `aimarket-symmartys`, Python module `symmartys`, product ID
+  `symmartys` and capabilities `symmartys.*@v1`. This is a breaking namespace change;
+  there are no legacy capability or module aliases.
+- Preserve installed identity and data: explicitly configured legacy environment
+  variables remain supported with warnings, an existing legacy signing key is reused,
+  ambiguous dual-key defaults refuse startup, and Compose requires an explicit data volume.
+- Update application code, offline tests, Docker sources and five-language documentation.
+  Prepared locally; no package, repository, container or deployment is published by this change.
+- See [MIGRATION.md](MIGRATION.md) before upgrading timer callbacks or signed requests.
+
+The dated history below retains the original product name and capability IDs used by those releases.
+
 ## 0.4.2 — 2026-10-25
 
 - **Fix: page capture accepted IPv6 addresses that carry a private IPv4 one.** The capture guard

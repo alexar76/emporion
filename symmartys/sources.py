@@ -1,4 +1,4 @@
-"""Where EMPORION's facts come from, under which licence, from which hosts.
+"""Where SYMMARTYS's facts come from, under which licence, from which hosts.
 
 A positive registry, like GAIA's source_policy: a source missing here cannot be
 fetched (net.py refuses its host), and every answer carries the attribution of the
@@ -27,7 +27,7 @@ SOURCES: dict[str, Source] = {
         "vies", "EU VIES — VAT Information Exchange System (European Commission)",
         "European Commission reuse policy (Decision 2011/833/EU)",
         "A public verification service of the European Commission; the answer is what "
-        "the member state's registry returned at request time. EMPORION stores nothing.",
+        "the member state's registry returned at request time. SYMMARTYS stores nothing.",
         "European Commission, VIES",
         ("ec.europa.eu",),
         "https://ec.europa.eu/taxation_customs/vies/#/help",
@@ -69,7 +69,7 @@ SOURCES: dict[str, Source] = {
         "Open Government Licence v3.0",
         "UK government information, free to reuse commercially with attribution. It carries the "
         "UN Security Council designations the UK implements, each with its UN reference number; "
-        "EMPORION reads the UN's own file no longer, as that carries no reuse licence.",
+        "SYMMARTYS reads the UN's own file no longer, as that carries no reuse licence.",
         "Contains public sector information licensed under the Open Government Licence v3.0 "
         "(UK Sanctions List, FCDO)",
         ("sanctionslist.fcdo.gov.uk",),
@@ -90,7 +90,7 @@ SOURCES: dict[str, Source] = {
     ),
     "bitcoin_headers": Source(
         "bitcoin_headers", "Bitcoin block headers from the Bitcoin P2P network", "Public chain data",
-        "Block headers are public consensus data that every Bitcoin node serves; EMPORION keeps "
+        "Block headers are public consensus data that every Bitcoin node serves; SYMMARTYS keeps "
         "its own copy from the genesis block, checks each header's proof of work and "
         "difficulty, and uses a header only once a second node on another network agrees.",
         "Bitcoin network (headers fetched peer to peer)",
@@ -101,7 +101,7 @@ SOURCES: dict[str, Source] = {
         "European Commission reuse policy (Decision 2011/833/EU)",
         "A public verification service of the European Commission for Economic Operators "
         "Registration and Identification numbers; name and address appear only where the "
-        "operator consented to their publication. EMPORION stores nothing.",
+        "operator consented to their publication. SYMMARTYS stores nothing.",
         "European Commission, EORI validation (EOS)",
         ("ec.europa.eu",),
         "https://ec.europa.eu/taxation_customs/dds2/eos/eori_validation.jsp",
@@ -160,15 +160,15 @@ SOURCES: dict[str, Source] = {
     ),
     "web": Source(
         "web", "A web page the caller names (web capture)",
-        "The page's own terms; EMPORION returns it to the caller as evidence only",
-        "EMPORION fetches one page once, as a browser would, and records what it answered. "
+        "The page's own terms; SYMMARTYS returns it to the caller as evidence only",
+        "SYMMARTYS fetches one page once, as a browser would, and records what it answered. "
         "The content belongs to its publisher.",
         "The publisher of the captured page",
         (),
     ),
     "holidays": Source(
         "holidays", "python-holidays — public holidays and market calendars", "MIT",
-        "An open-source library compiled into EMPORION: no network at answer time.",
+        "An open-source library compiled into SYMMARTYS: no network at answer time.",
         "python-holidays (vacanza/holidays), MIT",
         (),
         "https://github.com/vacanza/holidays/blob/dev/LICENSE",

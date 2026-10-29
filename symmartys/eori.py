@@ -17,7 +17,7 @@ from xml.sax.saxutils import escape
 
 from defusedxml import ElementTree as ET
 
-from emporion.net import UpstreamError, fetch
+from symmartys.net import UpstreamError, fetch
 
 URL = "https://ec.europa.eu/taxation_customs/dds2/eos/validation/services/validation"
 MAX_NUMBERS = 10

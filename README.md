@@ -1,39 +1,29 @@
 <!-- aicom-mirror-notice -->
-> **🔄 Synced from a monorepo — but with a live history.** `emporion` mirrors the
+> **🔄 Synced from a monorepo — but with a live history.** `symmartys` mirrors the
 > canonical AI-Factory monorepo. History here is append-only (no force-push).
 > **Pull requests are welcome** — merged PRs are imported back into the monorepo
 > and re-synced here, so your contribution becomes canonical.
-> 💬 **[Issues](https://github.com/alexar76/emporion/issues)** · **[Pull requests](https://github.com/alexar76/emporion/pulls)** both welcome.
-
-# EMPORION — public-record facts for agents that trade
+> 💬 **[Issues](https://github.com/alexar76/symmartys/issues)** · **[Pull requests](https://github.com/alexar76/symmartys/pulls)** both welcome.
 
 <!-- aicom-readme-badges -->
-<p align="center">
-  <a href="https://github.com/alexar76/emporion/actions/workflows/ci.yml"><img src="https://github.com/alexar76/emporion/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/alexar76/emporion/actions/workflows/pages.yml"><img src="https://github.com/alexar76/emporion/actions/workflows/pages.yml/badge.svg" alt="Pages deploy" /></a>
-  <a href="https://emporion.modelmarket.dev/"><img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/live.svg" alt="Live service" /></a>
-  <a href="https://alexar76.github.io/emporion/"><img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/landing.svg" alt="Landing" /></a>
-  <a href="https://github.com/alexar76/emporion/pkgs/container/emporion"><img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/ghcr.svg" alt="GHCR package" /></a>
-  <img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/python.svg" alt="Python >=3.11" />
-  <img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/tests.svg" alt="tests" />
-  <img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/aimarket.svg" alt="AIMarket v2" />
-  <img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/signing.svg" alt="Ed25519 + ML-DSA signing" />
-  <img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/i18n.svg" alt="Docs in 5 languages" />
-  <a href="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/coverage.svg"><img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/coverage.svg" alt="Test coverage" /></a>
-  <a href="https://github.com/alexar76/emporion/blob/main/LICENSE"><img src="https://raw.githubusercontent.com/alexar76/emporion/refs/heads/main/docs/badges/license.svg" alt="License: MIT" /></a>
-</p>
 <!-- /aicom-readme-badges -->
+
+# SYMMARTYS — public-record facts for agents that trade
+
+Local 0.5.0 rename: product `symmartys`, capabilities `symmartys.*`, Python package `aimarket-symmartys`. See [migration and state preservation](MIGRATION.md). New public addresses require a separate deployment; no renamed GitHub repository is claimed.
+
+![Python >=3.11](docs/badges/python.svg) ![Ed25519 + ML-DSA signing](docs/badges/signing.svg) ![MIT](docs/badges/license.svg)
 
 > 🌐 **English** · [Русский](README.ru.md) · [Español](README.es.md) · [Français](README.fr.md) · [中文](README.zh.md)
 
 An agent that buys, sells or pays needs facts no model can make up: is this VAT number valid,
 who is this company, what was the euro rate that day, is this wallet on a sanctions list, and
-can I prove this document existed yesterday. EMPORION answers each from the **public record** —
+can I prove this document existed yesterday. SYMMARTYS answers each from the **public record** —
 the European Commission, GLEIF, the ECB, the U.S. Treasury, the EU, the UK and Bitcoin — and
 signs every answer together with **where it came from, when, and the SHA-256 of what the source
 returned**.
 
-*Emporion* (ἐμπόριον): the trading post of a Greek city, where traders met and settled.
+*Symmartys* (συμμάρτυς): a joint or corroborating witness — a source-backed answer that another party can check.
 
 Since 0.2.0 it also answers the questions that come next: is this company in its national
 register, is its EORI number valid for customs, how old is the domain the shop runs on, which day
@@ -45,25 +35,25 @@ switch, that calls the agent back with a signed event.
 
 | Capability | Price | What it answers | Source |
 |---|---|---|---|
-| `emporion.vat.check@v1` | $0.002 | Is this EU VAT number valid today? Name, address, time of the check — and, when you name **your own** VAT number as requester, VIES's **consultation number**: official proof of the check in your name | EU VIES |
-| `emporion.lei.lookup@v1` | $0.001 | Who is this legal entity? By LEI (check digits verified locally) or by name (ranked candidates): legal name, jurisdiction, legal form, status, addresses, renewal, direct and ultimate parents | GLEIF (CC0) |
-| `emporion.fx.rate@v1` | $0.001 | Euro reference rate for any pair on any date since 1999, the ECB day it is from, cross rates through the euro in Decimal, an amount rounded to the currency's minor units | ECB |
-| `emporion.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~1,050 digital-currency addresses), EU and UK lists (UN designations through them, each hit with its UN number), with each list's date and SHA-256 | OFAC · EU · UK |
-| `emporion.timestamp.stamp@v1` | $0.001 | Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; returns a standard `.ots` proof | OpenTimestamps |
-| `emporion.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of the Bitcoin block header EMPORION holds from the Bitcoin network itself (every header's proof of work checked, the chain agreed by two nodes) | Bitcoin |
-| `emporion.web.capture@v1` | $0.003 | A web page as evidence: final URL, every redirect, the IP, status, key headers, the TLS certificate and the SHA-256 of the body (and the body, up to 512 KB); the record's SHA-256 is anchored in Bitcoin | the page itself · OpenTimestamps |
-| `emporion.domain.rdap@v1` | $0.001 | Who registered this domain and when: created, expires, age in days, registrar, status, nameservers, DNSSEC — or `registered: false` | IANA bootstrap → the TLD's registry |
-| `emporion.company.lookup@v1` | $0.001 | Is this company real and alive? By number or name: name, status, legal form, founding date, address, VAT number, and the register's own fields | Brønnøysund (NO) · SIRENE/RNE (FR) · ARES (CZ) · PRH (FI) · Companies House (GB, with the operator's key) |
-| `emporion.eori.check@v1` | $0.002 | Is this EORI number valid for EU customs? Up to 10 at once; name and address where the operator consented | European Commission (EOS) |
-| `emporion.calendar.check@v1` | $0.001 | Business days in ~250 countries (and regions) or on a market (TARGET2, NYSE, LSE…): holiday, next/previous business day, date + N business days, days between, a year's holidays | python-holidays (offline) |
-| `emporion.timer.set@v1` | $0.002 | A signed POST to your https callback at a time, or a dead man's switch that fires unless you check in every N seconds | — |
-| `emporion.timer.checkin@v1` · `.cancel@v1` · `.status@v1` | free | Keep a dead man's switch alive, cancel a timer, read its state (with the timer's token) | — |
-| `emporion.sources@v1` | free | Every source's licence and attribution, the sanctions lists held now, the latest ECB day | — |
+| `symmartys.vat.check@v1` | $0.002 | Is this EU VAT number valid today? Name, address, time of the check — and, when you name **your own** VAT number as requester, VIES's **consultation number**: official proof of the check in your name | EU VIES |
+| `symmartys.lei.lookup@v1` | $0.001 | Who is this legal entity? By LEI (check digits verified locally) or by name (ranked candidates): legal name, jurisdiction, legal form, status, addresses, renewal, direct and ultimate parents | GLEIF (CC0) |
+| `symmartys.fx.rate@v1` | $0.001 | Euro reference rate for any pair on any date since 1999, the ECB day it is from, cross rates through the euro in Decimal, an amount rounded to the currency's minor units | ECB |
+| `symmartys.sanctions.screen@v1` | $0.002 | Is this wallet address or name on a public sanctions list? OFAC SDN (with ~1,050 digital-currency addresses), EU and UK lists (UN designations through them, each hit with its UN number), with each list's date and SHA-256 | OFAC · EU · UK |
+| `symmartys.timestamp.stamp@v1` | $0.001 | Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; returns a standard `.ots` proof | OpenTimestamps |
+| `symmartys.timestamp.verify@v1` | $0.001 | Upgrade and verify a proof: confirmed when its result equals the Merkle root of the Bitcoin block header SYMMARTYS holds from the Bitcoin network itself (every header's proof of work checked, the chain agreed by two nodes) | Bitcoin |
+| `symmartys.web.capture@v1` | $0.003 | A web page as evidence: final URL, every redirect, the IP, status, key headers, the TLS certificate and the SHA-256 of the body (and the body, up to 512 KB); the record's SHA-256 is anchored in Bitcoin | the page itself · OpenTimestamps |
+| `symmartys.domain.rdap@v1` | $0.001 | Who registered this domain and when: created, expires, age in days, registrar, status, nameservers, DNSSEC — or `registered: false` | IANA bootstrap → the TLD's registry |
+| `symmartys.company.lookup@v1` | $0.001 | Is this company real and alive? By number or name: name, status, legal form, founding date, address, VAT number, and the register's own fields | Brønnøysund (NO) · SIRENE/RNE (FR) · ARES (CZ) · PRH (FI) · Companies House (GB, with the operator's key) |
+| `symmartys.eori.check@v1` | $0.002 | Is this EORI number valid for EU customs? Up to 10 at once; name and address where the operator consented | European Commission (EOS) |
+| `symmartys.calendar.check@v1` | $0.001 | Business days in ~250 countries (and regions) or on a market (TARGET2, NYSE, LSE…): holiday, next/previous business day, date + N business days, days between, a year's holidays | python-holidays (offline) |
+| `symmartys.timer.set@v1` | $0.002 | A signed POST to your https callback at a time, or a dead man's switch that fires unless you check in every N seconds | — |
+| `symmartys.timer.checkin@v1` · `.cancel@v1` · `.status@v1` | free | Keep a dead man's switch alive, cancel a timer, read its state (with the timer's token) | — |
+| `symmartys.sources@v1` | free | Every source's licence and attribution, the sanctions lists held now, the latest ECB day | — |
 
 ```mermaid
 flowchart LR
     A[Agent] -->|invoke + payment| H[AIMarket hub]
-    H -->|X-Provider-Signature required| E[EMPORION]
+    H -->|X-Provider-Signature required| E[SYMMARTYS]
     E --> N{allowlist<br/>per source}
     N --> V[VIES]
     N --> G[GLEIF]
@@ -94,24 +84,24 @@ flowchart LR
 ## Examples
 
 ```bash
-H=https://emporion.modelmarket.dev
+H=https://symmartys.modelmarket.dev
 inv() { curl -s -X POST $H/ai-market/v2/invoke -H 'Content-Type: application/json' -d "$1"; }
 
-inv '{"capability_id":"emporion.vat.check@v1","input":{"vat":"NL004495445B01","requester_vat":"DE811569869"}}'
-inv '{"capability_id":"emporion.lei.lookup@v1","input":{"name":"Deutsche Bank"}}'
-inv '{"capability_id":"emporion.fx.rate@v1","input":{"base":"USD","quote":"JPY","date":"2026-10-11","amount":"100"}}'
-inv '{"capability_id":"emporion.sanctions.screen@v1","input":{"address":"0x…"}}'
-inv '{"capability_id":"emporion.timestamp.stamp@v1","input":{"digest":"'"$(sha256sum contract.pdf | cut -d' ' -f1)"'"}}'
-inv '{"capability_id":"emporion.web.capture@v1","input":{"url":"https://shop.example/terms"}}'
-inv '{"capability_id":"emporion.domain.rdap@v1","input":{"domain":"shop.example"}}'
-inv '{"capability_id":"emporion.company.lookup@v1","input":{"country":"FR","number":"552032534"}}'
-inv '{"capability_id":"emporion.eori.check@v1","input":{"eori":"CZ00177041"}}'
-inv '{"capability_id":"emporion.calendar.check@v1","input":{"market":"XECB","add_business_days":5}}'
-inv '{"capability_id":"emporion.timer.set@v1","input":{"callback":"https://agent.example/hook","deadman_seconds":3600,"payload":{"release":"escrow-7"}}}'
+inv '{"capability_id":"symmartys.vat.check@v1","input":{"vat":"NL004495445B01","requester_vat":"DE811569869"}}'
+inv '{"capability_id":"symmartys.lei.lookup@v1","input":{"name":"Deutsche Bank"}}'
+inv '{"capability_id":"symmartys.fx.rate@v1","input":{"base":"USD","quote":"JPY","date":"2026-10-11","amount":"100"}}'
+inv '{"capability_id":"symmartys.sanctions.screen@v1","input":{"address":"0x…"}}'
+inv '{"capability_id":"symmartys.timestamp.stamp@v1","input":{"digest":"'"$(sha256sum contract.pdf | cut -d' ' -f1)"'"}}'
+inv '{"capability_id":"symmartys.web.capture@v1","input":{"url":"https://shop.example/terms"}}'
+inv '{"capability_id":"symmartys.domain.rdap@v1","input":{"domain":"shop.example"}}'
+inv '{"capability_id":"symmartys.company.lookup@v1","input":{"country":"FR","number":"552032534"}}'
+inv '{"capability_id":"symmartys.eori.check@v1","input":{"eori":"CZ00177041"}}'
+inv '{"capability_id":"symmartys.calendar.check@v1","input":{"market":"XECB","add_business_days":5}}'
+inv '{"capability_id":"symmartys.timer.set@v1","input":{"callback":"https://agent.example/hook","deadman_seconds":3600,"payload":{"release":"escrow-7"}}}'
 ```
 
 Through the hub, the same calls are paid and receipted: `POST https://modelmarket.dev/ai-market/v2/invoke`
-with `"product_id":"emporion"`.
+with `"product_id":"symmartys"`.
 
 ### VAT: the consultation number
 
@@ -139,7 +129,7 @@ incomplete. Every answer says so, and names the lists it used with their publica
 SHA-256. An outdated list is refused, not used.
 
 **UN designations come through the UK and EU lists.** The UN Security Council's own file carries
-no reuse licence, so EMPORION does not read it. The UK Sanctions List (Open Government Licence
+no reuse licence, so SYMMARTYS does not read it. The UK Sanctions List (Open Government Licence
 v3.0) gives every UN designation the UK implements its UN reference number, as the EU file does
 for some: a hit carries `un_ref`, and `lists: ["UN"]` screens only the UK and EU entries that have
 one. On 2026-10-17 the three lists together held all 1010 UN entries (991 by UN number in the UK
@@ -152,7 +142,7 @@ delay the UK and the EU take to implement them, usually days.
 sequenceDiagram
     autonumber
     participant A as Agent
-    participant E as EMPORION
+    participant E as SYMMARTYS
     participant C as OpenTimestamps calendars
     participant B as Bitcoin nodes (P2P, ×2)
     A->>E: stamp {digest}
@@ -171,18 +161,18 @@ sequenceDiagram
 ```
 
 The proof is a standard OpenTimestamps file: it verifies with any OpenTimestamps client, without
-EMPORION. The reference example (`hello-world.txt`) verifies to block 358 391, 2015-05-28.
+SYMMARTYS. The reference example (`hello-world.txt`) verifies to block 358 391, 2015-05-28.
 
 ### Web capture: what the page said
 
-EMPORION fetches the page once, as a browser would, and returns a `record`: the URL asked, the
+SYMMARTYS fetches the page once, as a browser would, and returns a `record`: the URL asked, the
 final URL, every redirect with its status and IP, the time, the status, the headers that say what
 the page was (content type, length, `Last-Modified`, `ETag`, `Date`, `Server`…), the TLS
 certificate the server presented (subject, issuer, validity, names, SHA-256 of the certificate),
 the page title and `body_sha256`. The body itself comes back as `body_b64` when it is 512 KB or
 less (the cap for a page is 5 MB). `record_sha256` is the SHA-256 of the record as JSON with sorted
 keys and compact separators, and it is anchored in Bitcoin through OpenTimestamps — verify it later
-with `emporion.timestamp.verify@v1`. A 404 is a capture (that is what the page said); a host that
+with `symmartys.timestamp.verify@v1`. A 404 is a capture (that is what the page said); a host that
 cannot be reached, or a certificate that does not verify, costs nothing.
 
 ### Timers and the dead man's switch
@@ -191,7 +181,7 @@ cannot be reached, or a certificate that does not verify, costs nothing.
 sequenceDiagram
     autonumber
     participant A as Agent
-    participant E as EMPORION
+    participant E as SYMMARTYS
     participant C as Agent callback (https)
     A->>E: timer.set {callback, deadman_seconds: 3600, payload}
     E-->>A: timer_id + token (once)
@@ -206,9 +196,9 @@ sequenceDiagram
 
 `at` (an ISO time with zone) or `after_seconds` sets a one-off call instead. The event carries the
 timer id, kind, due and fired times, the attempt and your payload (up to 4 KB); the signature is
-EMPORION's key from its signed manifest, over the event as JSON with sorted keys and compact
+SYMMARTYS's key from its signed manifest, over the event as JSON with sorted keys and compact
 separators. The token is kept only as its SHA-256. Timers live at most 90 days, in one SQLite file
-in EMPORION's data volume.
+in SYMMARTYS's data volume.
 
 ### Company registers, EORI, domains, business days
 
@@ -224,28 +214,28 @@ in EMPORION's data volume.
   subdomain or URL is reduced to the registered name by asking the registry. Some country codes
   (`.de`, `.ru`…) publish no RDAP service yet — that is refused and costs nothing.
 - **RDAP etiquette.** Registries' terms forbid high-volume automated querying and repackaging, so
-  EMPORION asks one registry at most 30 times a minute, keeps each answer 24 hours (an hour for
+  SYMMARTYS asks one registry at most 30 times a minute, keeps each answer 24 hours (an hour for
   "not registered"; a cached answer says `cached: true` and keeps the original fetch time), and
   passes the registry's own notices — its terms of service among them — through as
   `registry_terms`.
 - **Personal data.** Registers list sole traders too, and their entries are personal data whatever
   the register's licence says. Every company answer carries `personal_data`: the purpose
   (verifying a counterparty), the basis (legitimate interest, GDPR Art. 6(1)(f)) and the retention
-  (EMPORION keeps no copy; its call log holds only a hash of the input).
-- **Business days** come from python-holidays compiled into EMPORION: no network, nothing to go
+  (SYMMARTYS keeps no copy; its call log holds only a hash of the input).
+- **Business days** come from python-holidays compiled into SYMMARTYS: no network, nothing to go
   down; the answer names the library version, because a holiday declared after that release is
   not in it.
 
 ## Honest limits
 
 - VIES answers what the member state's registry answers at that moment; some states return no
-  name or address. EMPORION stores nothing.
+  name or address. SYMMARTYS stores nothing.
 - GLEIF covers entities that have an LEI — many small companies do not.
 - Reference rates are for information, not dealing.
 - Sanctions screening is a lookup in three public lists, not legal advice or a compliance
   programme; other jurisdictions' lists are not included.
 - A timestamp proves existence no later than a block's time, not authorship.
-- A web capture shows what the server answered EMPORION at that moment; another visitor, country
+- A web capture shows what the server answered SYMMARTYS at that moment; another visitor, country
   or cookie may be shown another page. It is not a statement that the content is true.
 - Registers differ in what they publish; the registers of four countries (five with the UK key) are covered so far; Poland's KRS API did not answer when tried.
 - A timer is delivered at least once if the callback answers 2xx within four attempts; a receiver
@@ -254,37 +244,37 @@ in EMPORION's data volume.
 ## Run it
 
 ```bash
-# from this repository
-docker build -f Dockerfile.standalone -t emporion .
-docker run -d --name emporion -p 127.0.0.1:9351:9351 -v emporion-data:/data \
-  -e EMPORION_PUBLIC_URL=http://127.0.0.1:9351 emporion
+# From the local aicom workspace root
+docker build -f symmartys/Dockerfile -t symmartys .
+docker run -d --name symmartys -p 127.0.0.1:9351:9351 -v symmartys-data:/data \
+  -e SYMMARTYS_PUBLIC_URL=http://127.0.0.1:9351 symmartys
 curl -s http://127.0.0.1:9351/health
 ```
 
 In the [aicom](https://github.com/alexar76/aicom) monorepo the same runs from its root with
-`docker compose -f emporion/docker-compose.yml up -d --build`. `EMPORION_PUBLIC_URL` is the address
+`SYMMARTYS_VOLUME_NAME=symmartys-data docker compose -f symmartys/docker-compose.yml up -d --build` ([volume migration](MIGRATION.md); fresh installs first run `docker volume create symmartys-data`). `SYMMARTYS_PUBLIC_URL` is the address
 buyers reach; it is written into the signed manifest.
 
-Production, from the aicom monorepo: `./scripts/deploy_emporion.sh --remote <host>` serves it at
-`https://modelmarket.dev/providers/emporion/` behind the existing nginx (one snippet, backed up,
-`nginx -t` before reload), keeps the running image as `emporion:prev` and rolls back an unhealthy
+Production, from the aicom monorepo: `./scripts/deploy_symmartys.sh --remote <host>` serves it at
+`https://modelmarket.dev/providers/symmartys/` behind the existing nginx (one snippet, backed up,
+`nginx -t` before reload), keeps the running image as `symmartys:prev` and rolls back an unhealthy
 build. Steady memory ≈ 200 MB; the container is capped at 768 MB. It runs as uid 10001.
-Its own address is https://emporion.modelmarket.dev/ — the landing for people at `/`, the same API
-for agents everywhere else ([`deploy/nginx/emporion.modelmarket.dev.conf`](https://github.com/alexar76/aicom/blob/main/deploy/nginx/emporion.modelmarket.dev.conf));
-the `/providers/emporion/` path stays the address the hub federates with.
+Its branded deployment target is https://symmartys.modelmarket.dev/ — the landing for people at `/`, the same API
+for agents everywhere else ([`deploy/nginx/symmartys.modelmarket.dev.conf`](../deploy/nginx/symmartys.modelmarket.dev.conf));
+the `/providers/symmartys/` path stays the address the hub federates with.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `EMPORION_PUBLIC_URL` | `https://modelmarket.dev/providers/emporion` | base URL in the manifest |
-| `EMPORION_PORT` | `9351` | listen port |
-| `EMPORION_RATE_LIMIT` | `120` | invokes per minute per client |
-| `EMPORION_CORS_ORIGINS` | empty (no browser origin) | CORS allowlist |
+| `SYMMARTYS_PUBLIC_URL` | `https://modelmarket.dev/providers/symmartys` | base URL in the manifest |
+| `SYMMARTYS_PORT` | `9351` | listen port |
+| `SYMMARTYS_RATE_LIMIT` | `120` | invokes per minute per client |
+| `SYMMARTYS_CORS_ORIGINS` | empty (no browser origin) | CORS allowlist |
 | `COMPANIES_HOUSE_API_KEY` | empty (GB not offered) | the operator's free Companies House API key |
-| `EMPORION_TIMERS_DB` | `timers.sqlite` beside the signing key | where timers are kept |
+| `SYMMARTYS_TIMERS_DB` | `timers.sqlite` beside the signing key | where timers are kept |
 | `ORACLE_PQC` | `1` in compose | hybrid ML-DSA-65 signatures |
 
 Tests: `pip install -e "vendor/oracle-core[pqc]" -e '.[dev]' && pytest` (in the monorepo:
-`-e ../oracles/core`) — 160 tests on excerpts of real answers, none reaching a live source; in the
+`-e ../oracles/core`) — 175 tests on excerpts of real answers, none reaching a live source; in the
 monorepo the signed canonical is also checked byte for byte against the hub's own function.
 
 ## Sources and licences

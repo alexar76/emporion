@@ -11,9 +11,9 @@ import json
 import httpx
 import pytest
 
-from emporion import capture
-from emporion.net import UpstreamError
-from emporion.timers import TimerService, event_canonical
+from symmartys import capture
+from symmartys.net import UpstreamError
+from symmartys.timers import TimerService, event_canonical
 
 
 class FakeSSL:

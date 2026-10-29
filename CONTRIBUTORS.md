@@ -1,4 +1,4 @@
-# Contributors — emporion
+# Contributors — symmartys
 
 ## Maintainers
 

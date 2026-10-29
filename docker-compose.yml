@@ -1,21 +1,30 @@
-# EMPORION. Build context is the monorepo root (oracle-core is copied in):
-#     docker compose -f emporion/docker-compose.yml up -d --build
-# Loopback only; nginx publishes it (deploy: scripts/deploy_emporion.sh).
+# SYMMARTYS. Build context is the monorepo root (oracle-core is copied in):
+#     docker compose -f symmartys/docker-compose.yml up -d --build
+# Loopback only; nginx publishes it (deploy: scripts/deploy_symmartys.sh).
 services:
-  emporion:
+  symmartys:
     build:
       context: ..
-      dockerfile: emporion/Dockerfile
+      dockerfile: symmartys/Dockerfile
       target: runtime
-    image: emporion:latest
-    container_name: emporion
+    image: symmartys:latest
+    container_name: symmartys
     restart: unless-stopped
     ports:
       - "127.0.0.1:9351:9351"
     environment:
-      EMPORION_PUBLIC_URL: ${EMPORION_PUBLIC_URL:-https://modelmarket.dev/providers/emporion}
-      EMPORION_CORS_ORIGINS: ${EMPORION_CORS_ORIGINS:-}
-      EMPORION_RATE_LIMIT: ${EMPORION_RATE_LIMIT:-120}
+      SYMMARTYS_PUBLIC_URL: ${SYMMARTYS_PUBLIC_URL:-${EMPORION_PUBLIC_URL:-https://modelmarket.dev/providers/symmartys}}
+      SYMMARTYS_CORS_ORIGINS: ${SYMMARTYS_CORS_ORIGINS-${EMPORION_CORS_ORIGINS-}}
+      SYMMARTYS_RATE_LIMIT: ${SYMMARTYS_RATE_LIMIT:-${EMPORION_RATE_LIMIT:-120}}
+      SYMMARTYS_STATE_DIR: ${SYMMARTYS_STATE_DIR:-/data}
+      # Null pass-through values are omitted when unset; do not force an empty key path.
+      SYMMARTYS_SIGNING_KEY_PATH:
+      SYMMARTYS_CACHE_DIR:
+      SYMMARTYS_TIMERS_DB:
+      SYMMARTYS_BTC_HEADERS:
+      SYMMARTYS_HOST:
+      SYMMARTYS_PORT:
+      SYMMARTYS_LOG_LEVEL:
       # The operator's free Companies House key; empty leaves GB out of company.lookup.
       COMPANIES_HOUSE_API_KEY: ${COMPANIES_HOUSE_API_KEY:-}
       # Hybrid ML-DSA-65 alongside Ed25519, as the oracle family and GAIA sign.
@@ -24,6 +33,9 @@ services:
       # only a call a hub in ORACLE_TRUSTED_HUBS ("url=ed25519 key,…") signed, or 402. Empty
       # leaves it off, as before. ORACLE_PRICE_GATE=report logs what it would refuse first.
       ORACLE_TRUSTED_HUBS: ${ORACLE_TRUSTED_HUBS:-}
+      # Whose X-Real-IP / X-Forwarded-For count: the host's nginx, which reaches the published port
+      # through the docker gateway. Not every private address (Vulnetix GCVE-110-VULN-PYPI-2026-000637).
+      ORACLE_TRUSTED_PROXIES: ${ORACLE_TRUSTED_PROXIES:-127.0.0.1/32,::1/128,gateway}
       ORACLE_PRICE_GATE: ${ORACLE_PRICE_GATE:-}
       ORACLE_HUB_AUDIENCES: ${ORACLE_HUB_AUDIENCES:-}
       # The call log (oracle_core.calls): every invoke written down, SQLite in /data unless
@@ -35,9 +47,13 @@ services:
       ORACLE_OPS_TOKEN: ${ORACLE_OPS_TOKEN:-}
       ORACLE_CALLS_RETENTION_DAYS: ${ORACLE_CALLS_RETENTION_DAYS:-90}
     volumes:
-      - emporion_data:/data
+      - symmartys_data:/data
     # Parsing the EU list (25 MB XML) peaks near 250 MB; leave headroom, cap the rest.
     mem_limit: 768m
 
 volumes:
-  emporion_data:
+  symmartys_data:
+    # Upgrades must explicitly reuse their existing volume; never create a fresh identity
+    # merely because the project/service directory was renamed.
+    name: ${SYMMARTYS_VOLUME_NAME:?Set SYMMARTYS_VOLUME_NAME to the existing data volume, or symmartys-data for a deliberate fresh installation}
+    external: true

@@ -1,13 +1,13 @@
-/* EMPORION landing: the five languages and the language switch. A file, not an inline
-   script, so the page runs under script-src 'self' on emporion.modelmarket.dev. */
+/* SYMMARTYS landing: the five languages and the language switch. A file, not an inline
+   script, so the page runs under script-src 'self' on symmartys.modelmarket.dev. */
 const I18N = {
   en: {
-    nav_caps:"Capabilities", nav_trust:"Trust", nav_call:"Call it", nav_source:"Source", nav_live:"Live service",
-    greek:"ἐμπόριον — the trading post where traders met and settled",
+    nav_caps:"Capabilities", nav_trust:"Trust", nav_call:"Call it", nav_source:"Legacy source (0.4.2)", nav_live:"Live service",
+    greek:"συμμάρτυς — a joint or corroborating witness",
     hero_p:"Public-record facts for agents that trade: EU VAT, legal entities, ECB rates, sanctions lists and Bitcoin timestamps — every answer signed with its source, the fetch time and the SHA-256 of what the source returned.",
-    cta_live:"Open the live service", cta_github:"View on GitHub", cta_hub:"Buy through modelmarket.dev",
+    cta_live:"Open the live service", cta_github:"Legacy source (0.4.2)", cta_hub:"Buy through modelmarket.dev",
     what_h2:"Facts no model can make up",
-    what_lead:"An agent that buys, sells or pays has to know: is this VAT number valid, who is this company, what was the euro rate that day, is this wallet on a sanctions list, did this document exist yesterday. EMPORION answers from the public record and says exactly where each answer came from.",
+    what_lead:"An agent that buys, sells or pays has to know: is this VAT number valid, who is this company, what was the euro rate that day, is this wallet on a sanctions list, did this document exist yesterday. SYMMARTYS answers from the public record and says exactly where each answer came from.",
     caps_h2:"Sixteen capabilities",
     caps_lead:"Sold per call through the AIMarket hub. A source that cannot answer is a refusal, and a refusal costs nothing.",
     c1:"Is this EU VAT number valid today? Name, address — and, with your own VAT number as requester, the VIES consultation number: official proof of the check.",
@@ -15,7 +15,7 @@ const I18N = {
     c3:"The euro reference rate for any pair on any date since 1999, and the ECB day it is from.",
     c4:"Is this wallet address or name on a public sanctions list? OFAC SDN with digital-currency addresses, the EU and UK lists (UN designations through them, with their UN numbers) — each with its date and SHA-256.",
     c5:"Anchor a SHA-256 digest in Bitcoin through the OpenTimestamps calendars; you get a standard .ots proof.",
-    c6:"Verify a proof against EMPORION's own Bitcoin header chain, taken from the Bitcoin network itself: proof of work checked, two nodes agree.",
+    c6:"Verify a proof against SYMMARTYS's own Bitcoin header chain, taken from the Bitcoin network itself: proof of work checked, two nodes agree.",
     c7:"Every source's licence and attribution, and which sanctions lists are held right now.",
     c8:"A web page as evidence: final URL, redirects, IP, TLS certificate and the SHA-256 of the body — the record anchored in Bitcoin.",
     c9:"Who registered this domain and when: age in days, registrar, status — from the TLD's own registry.",
@@ -31,21 +31,21 @@ const I18N = {
     t4_t:"Honest refusals", t4_d:"A sanctions list older than 48 hours or a silent registry is a refusal that costs nothing — never an empty \"not listed\".",
     call_h2:"Call it", call_lead:"Through the hub — five free trial calls an hour — or run your own copy from the repository.",
     limits_h2:"Honest limits",
-    l1:"VIES answers what the member state's registry answers at that moment; some states return no name or address. EMPORION stores nothing.",
+    l1:"VIES answers what the member state's registry answers at that moment; some states return no name or address. SYMMARTYS stores nothing.",
     l2:"GLEIF covers entities that have an LEI — many small companies do not.",
     l3:"Reference rates are for information, not dealing.",
     l4:"Sanctions screening is a lookup in three public lists, not legal advice or a compliance programme.",
     l5:"A timestamp proves existence no later than a block's time, not authorship.",
-    foot_eco:"EMPORION · AICOM / AIMarket ecosystem · MIT", foot_changes:"Changelog",
+    foot_eco:"SYMMARTYS · AICOM / AIMarket ecosystem · MIT", foot_changes:"Legacy changelog (0.4.2)",
     scene_live:"Live: the sanctions lists the service holds now", scene_sim:"Illustration: no live lists from the service right now",
   },
   ru: {
-    nav_caps:"Функции", nav_trust:"Доверие", nav_call:"Вызов", nav_source:"Исходники", nav_live:"Живой сервис",
-    greek:"ἐμπόριον — торговое место, где встречались и рассчитывались торговцы",
+    nav_caps:"Функции", nav_trust:"Доверие", nav_call:"Вызов", nav_source:"Исходники до 0.4.2", nav_live:"Живой сервис",
+    greek:"συμμάρτυς — совместный свидетель, подтверждающий свидетель",
     hero_p:"Публичные факты для агентов, которые торгуют: НДС в ЕС, юрлица, курсы ЕЦБ, санкционные списки и метки времени в Биткоине — каждый ответ подписан вместе с источником, временем получения и SHA-256 того, что вернул источник.",
-    cta_live:"Открыть живой сервис", cta_github:"Смотреть на GitHub", cta_hub:"Купить через modelmarket.dev",
+    cta_live:"Открыть живой сервис", cta_github:"Исходники до 0.4.2", cta_hub:"Купить через modelmarket.dev",
     what_h2:"Факты, которые модель не придумает",
-    what_lead:"Агенту, который покупает, продаёт или платит, нужно знать: действителен ли этот НДС-номер, что это за компания, какой был курс евро в тот день, есть ли этот кошелёк в санкционном списке, существовал ли этот документ вчера. EMPORION отвечает по публичным реестрам и точно говорит, откуда взят каждый ответ.",
+    what_lead:"Агенту, который покупает, продаёт или платит, нужно знать: действителен ли этот НДС-номер, что это за компания, какой был курс евро в тот день, есть ли этот кошелёк в санкционном списке, существовал ли этот документ вчера. SYMMARTYS отвечает по публичным реестрам и точно говорит, откуда взят каждый ответ.",
     caps_h2:"Шестнадцать функций",
     caps_lead:"Продаются поштучно через хаб AIMarket. Если источник не может ответить, это отказ, а отказ ничего не стоит.",
     c1:"Действителен ли этот НДС-номер ЕС сегодня? Название, адрес — а если указать свой НДС-номер как запрашивающего, то и номер консультации VIES: официальное подтверждение проверки.",
@@ -69,21 +69,21 @@ const I18N = {
     t4_t:"Честные отказы", t4_d:"Санкционный список старше 48 часов или молчащий реестр — это отказ, который ничего не стоит, а не пустое «не найден».",
     call_h2:"Вызов", call_lead:"Через хаб — пять бесплатных пробных вызовов в час — или запустите свою копию из репозитория.",
     limits_h2:"Честные ограничения",
-    l1:"VIES отвечает то, что в этот момент отвечает реестр страны; некоторые страны не отдают название и адрес. EMPORION ничего не хранит.",
+    l1:"VIES отвечает то, что в этот момент отвечает реестр страны; некоторые страны не отдают название и адрес. SYMMARTYS ничего не хранит.",
     l2:"GLEIF знает только юрлица с LEI — у многих небольших компаний его нет.",
     l3:"Справочные курсы — для информации, а не для сделок.",
     l4:"Санкционная проверка — это поиск по трём публичным спискам, а не юридическая консультация и не программа комплаенса.",
     l5:"Метка времени доказывает, что документ существовал не позже времени блока, но не доказывает авторство.",
-    foot_eco:"EMPORION · экосистема AICOM / AIMarket · MIT", foot_changes:"Изменения",
+    foot_eco:"SYMMARTYS · экосистема AICOM / AIMarket · MIT", foot_changes:"Изменения до 0.4.2",
     scene_live:"Вживую: санкционные списки, которые сервис держит сейчас", scene_sim:"Иллюстрация: живой сервис сейчас не отдал списки",
   },
   es: {
-    nav_caps:"Capacidades", nav_trust:"Confianza", nav_call:"Llamarlo", nav_source:"Código", nav_live:"Servicio en vivo",
-    greek:"ἐμπόριον — el puesto comercial donde los mercaderes se reunían y liquidaban",
+    nav_caps:"Capacidades", nav_trust:"Confianza", nav_call:"Llamarlo", nav_source:"Código anterior (0.4.2)", nav_live:"Servicio en vivo",
+    greek:"συμμάρτυς — testigo conjunto o corroborante",
     hero_p:"Hechos de registro público para agentes que comercian: IVA de la UE, entidades jurídicas, tipos del BCE, listas de sanciones y sellos de tiempo en Bitcoin — cada respuesta firmada con su fuente, la hora de obtención y el SHA-256 de lo que devolvió la fuente.",
-    cta_live:"Abrir el servicio en vivo", cta_github:"Ver en GitHub", cta_hub:"Comprar en modelmarket.dev",
+    cta_live:"Abrir el servicio en vivo", cta_github:"Código anterior (0.4.2)", cta_hub:"Comprar en modelmarket.dev",
     what_h2:"Hechos que ningún modelo puede inventar",
-    what_lead:"Un agente que compra, vende o paga necesita saber: ¿es válido este número de IVA?, ¿quién es esta empresa?, ¿cuál era el tipo del euro ese día?, ¿está este monedero en una lista de sanciones?, ¿existía ayer este documento? EMPORION responde desde el registro público y dice exactamente de dónde viene cada respuesta.",
+    what_lead:"Un agente que compra, vende o paga necesita saber: ¿es válido este número de IVA?, ¿quién es esta empresa?, ¿cuál era el tipo del euro ese día?, ¿está este monedero en una lista de sanciones?, ¿existía ayer este documento? SYMMARTYS responde desde el registro público y dice exactamente de dónde viene cada respuesta.",
     caps_h2:"Dieciséis capacidades",
     caps_lead:"Se venden por llamada a través del hub de AIMarket. Una fuente que no puede responder es un rechazo, y un rechazo no cuesta nada.",
     c1:"¿Es válido hoy este número de IVA de la UE? Nombre, dirección y, si indica su propio número de IVA como solicitante, el identificador de consulta de VIES: prueba oficial de la comprobación.",
@@ -91,7 +91,7 @@ const I18N = {
     c3:"El tipo de referencia del euro para cualquier par en cualquier fecha desde 1999, y el día del BCE al que corresponde.",
     c4:"¿Está esta dirección de monedero o este nombre en una lista pública de sanciones? OFAC SDN con direcciones de criptomonedas, las listas de la UE y del Reino Unido (las designaciones de la ONU a través de ellas, con su número de la ONU), cada una con su fecha y SHA-256.",
     c5:"Anclar un resumen SHA-256 en Bitcoin a través de los calendarios de OpenTimestamps; recibe una prueba .ots estándar.",
-    c6:"Verificar una prueba con la propia cadena de cabeceras de Bitcoin de EMPORION, tomada de la red Bitcoin: prueba de trabajo comprobada, dos nodos coinciden.",
+    c6:"Verificar una prueba con la propia cadena de cabeceras de Bitcoin de SYMMARTYS, tomada de la red Bitcoin: prueba de trabajo comprobada, dos nodos coinciden.",
     c7:"La licencia y la atribución de cada fuente, y qué listas de sanciones están cargadas ahora mismo.",
     c8:"Una página web como prueba: URL final, redirecciones, IP, certificado TLS y el SHA-256 del cuerpo — el registro anclado en Bitcoin.",
     c9:"Quién registró este dominio y cuándo: antigüedad en días, registrador, estado — desde el registro del propio TLD.",
@@ -107,21 +107,21 @@ const I18N = {
     t4_t:"Rechazos honestos", t4_d:"Una lista de sanciones de más de 48 horas o un registro que no contesta es un rechazo que no cuesta nada, nunca un «no listado» vacío.",
     call_h2:"Llamarlo", call_lead:"A través del hub (cinco llamadas de prueba gratuitas por hora) o ejecute su propia copia desde el repositorio.",
     limits_h2:"Límites honestos",
-    l1:"VIES responde lo que responde en ese momento el registro del Estado miembro; algunos Estados no devuelven nombre ni dirección. EMPORION no guarda nada.",
+    l1:"VIES responde lo que responde en ese momento el registro del Estado miembro; algunos Estados no devuelven nombre ni dirección. SYMMARTYS no guarda nada.",
     l2:"GLEIF cubre las entidades que tienen LEI; muchas empresas pequeñas no lo tienen.",
     l3:"Los tipos de referencia son informativos, no para operar.",
     l4:"La comprobación de sanciones es una búsqueda en tres listas públicas, no asesoramiento jurídico ni un programa de cumplimiento.",
     l5:"Un sello de tiempo prueba la existencia no más tarde de la hora de un bloque, no la autoría.",
-    foot_eco:"EMPORION · ecosistema AICOM / AIMarket · MIT", foot_changes:"Cambios",
+    foot_eco:"SYMMARTYS · ecosistema AICOM / AIMarket · MIT", foot_changes:"Cambios anteriores (0.4.2)",
     scene_live:"En vivo: las listas de sanciones que el servicio tiene ahora", scene_sim:"Ilustración: el servicio en vivo no ha dado sus listas ahora mismo",
   },
   fr: {
-    nav_caps:"Capacités", nav_trust:"Confiance", nav_call:"L'appeler", nav_source:"Source", nav_live:"Service en direct",
-    greek:"ἐμπόριον — le comptoir où les marchands se rencontraient et réglaient leurs comptes",
+    nav_caps:"Capacités", nav_trust:"Confiance", nav_call:"L'appeler", nav_source:"Source historique (0.4.2)", nav_live:"Service en direct",
+    greek:"συμμάρτυς — témoin conjoint ou corroborant",
     hero_p:"Des faits de registre public pour les agents qui commercent : TVA de l'UE, entités juridiques, taux de la BCE, listes de sanctions et horodatages Bitcoin — chaque réponse signée avec sa source, l'heure de récupération et le SHA-256 de ce que la source a renvoyé.",
-    cta_live:"Ouvrir le service en direct", cta_github:"Voir sur GitHub", cta_hub:"Acheter sur modelmarket.dev",
+    cta_live:"Ouvrir le service en direct", cta_github:"Source historique (0.4.2)", cta_hub:"Acheter sur modelmarket.dev",
     what_h2:"Des faits qu'aucun modèle ne peut inventer",
-    what_lead:"Un agent qui achète, vend ou paie doit savoir : ce numéro de TVA est-il valide, qui est cette société, quel était le cours de l'euro ce jour-là, ce portefeuille figure-t-il sur une liste de sanctions, ce document existait-il hier. EMPORION répond à partir du registre public et dit exactement d'où vient chaque réponse.",
+    what_lead:"Un agent qui achète, vend ou paie doit savoir : ce numéro de TVA est-il valide, qui est cette société, quel était le cours de l'euro ce jour-là, ce portefeuille figure-t-il sur une liste de sanctions, ce document existait-il hier. SYMMARTYS répond à partir du registre public et dit exactement d'où vient chaque réponse.",
     caps_h2:"Seize capacités",
     caps_lead:"Vendues à l'appel via le hub AIMarket. Une source qui ne peut pas répondre est un refus, et un refus ne coûte rien.",
     c1:"Ce numéro de TVA de l'UE est-il valide aujourd'hui ? Nom, adresse et, si vous indiquez votre propre numéro de TVA comme demandeur, le numéro de consultation VIES : la preuve officielle de la vérification.",
@@ -129,7 +129,7 @@ const I18N = {
     c3:"Le taux de référence de l'euro pour n'importe quelle paire à n'importe quelle date depuis 1999, et le jour BCE dont il provient.",
     c4:"Cette adresse de portefeuille ou ce nom figure-t-il sur une liste publique de sanctions ? OFAC SDN avec adresses de cryptomonnaies, les listes de l'UE et du Royaume-Uni (les désignations de l'ONU à travers elles, avec leur numéro ONU), chacune avec sa date et son SHA-256.",
     c5:"Ancrer une empreinte SHA-256 dans Bitcoin via les calendriers OpenTimestamps ; vous recevez une preuve .ots standard.",
-    c6:"Vérifier une preuve avec la chaîne d'en-têtes Bitcoin d'EMPORION, tirée du réseau Bitcoin lui-même : preuve de travail vérifiée, deux nœuds concordent.",
+    c6:"Vérifier une preuve avec la chaîne d'en-têtes Bitcoin d'SYMMARTYS, tirée du réseau Bitcoin lui-même : preuve de travail vérifiée, deux nœuds concordent.",
     c7:"La licence et l'attribution de chaque source, et les listes de sanctions chargées en ce moment.",
     c8:"Une page web comme preuve : URL finale, redirections, IP, certificat TLS et SHA-256 du corps — l'enregistrement ancré dans Bitcoin.",
     c9:"Qui a enregistré ce domaine et quand : âge en jours, bureau d'enregistrement, statut — depuis le registre du TLD.",
@@ -145,21 +145,21 @@ const I18N = {
     t4_t:"Refus honnêtes", t4_d:"Une liste de sanctions de plus de 48 heures ou un registre muet est un refus qui ne coûte rien, jamais un « non listé » vide.",
     call_h2:"L'appeler", call_lead:"Via le hub (cinq appels d'essai gratuits par heure) ou lancez votre propre copie depuis le dépôt.",
     limits_h2:"Limites honnêtes",
-    l1:"VIES répond ce que répond à ce moment le registre de l'État membre ; certains États ne renvoient ni nom ni adresse. EMPORION ne conserve rien.",
+    l1:"VIES répond ce que répond à ce moment le registre de l'État membre ; certains États ne renvoient ni nom ni adresse. SYMMARTYS ne conserve rien.",
     l2:"GLEIF couvre les entités qui ont un LEI ; beaucoup de petites sociétés n'en ont pas.",
     l3:"Les taux de référence sont donnés à titre d'information, pas pour négocier.",
     l4:"Le contrôle des sanctions est une recherche dans trois listes publiques, pas un conseil juridique ni un programme de conformité.",
     l5:"Un horodatage prouve l'existence au plus tard à l'heure d'un bloc, pas la paternité.",
-    foot_eco:"EMPORION · écosystème AICOM / AIMarket · MIT", foot_changes:"Changements",
+    foot_eco:"SYMMARTYS · écosystème AICOM / AIMarket · MIT", foot_changes:"Historique (0.4.2)",
     scene_live:"En direct : les listes de sanctions que le service détient maintenant", scene_sim:"Illustration : le service en direct ne fournit pas ses listes pour l'instant",
   },
   zh: {
-    nav_caps:"能力", nav_trust:"可信", nav_call:"调用", nav_source:"源码", nav_live:"在线服务",
-    greek:"ἐμπόριον——古希腊城邦中商人会面与结算的贸易站",
+    nav_caps:"能力", nav_trust:"可信", nav_call:"调用", nav_source:"历史源码（0.4.2）", nav_live:"在线服务",
+    greek:"συμμάρτυς——共同见证者、佐证者",
     hero_p:"面向交易型智能体的公共记录事实：欧盟增值税、法人实体、欧洲央行汇率、制裁名单和比特币时间戳——每个答案都连同来源、获取时间以及来源所返回内容的 SHA-256 一起签名。",
-    cta_live:"打开在线服务", cta_github:"在 GitHub 上查看", cta_hub:"通过 modelmarket.dev 购买",
+    cta_live:"打开在线服务", cta_github:"历史源码（0.4.2）", cta_hub:"通过 modelmarket.dev 购买",
     what_h2:"模型编不出来的事实",
-    what_lead:"买、卖或付款的智能体需要知道：这个增值税号是否有效、这是哪家公司、那天的欧元汇率是多少、这个钱包是否在制裁名单上、这份文件昨天是否已经存在。EMPORION 根据公共记录作答，并准确说明每个答案的出处。",
+    what_lead:"买、卖或付款的智能体需要知道：这个增值税号是否有效、这是哪家公司、那天的欧元汇率是多少、这个钱包是否在制裁名单上、这份文件昨天是否已经存在。SYMMARTYS 根据公共记录作答，并准确说明每个答案的出处。",
     caps_h2:"十六项能力",
     caps_lead:"通过 AIMarket 枢纽按次出售。来源无法作答即为拒绝，而拒绝不收费。",
     c1:"这个欧盟增值税号今天是否有效？名称、地址——若以你自己的增值税号作为请求方，还会给出 VIES 查询编号：这次核验的官方证明。",
@@ -167,7 +167,7 @@ const I18N = {
     c3:"自 1999 年以来任意日期、任意货币对的欧元参考汇率，以及它所属的欧洲央行日期。",
     c4:"这个钱包地址或名称是否在公共制裁名单上？含数字货币地址的 OFAC SDN、欧盟和英国名单（联合国制裁经由它们覆盖，附联合国编号）——每份名单都附日期和 SHA-256。",
     c5:"通过 OpenTimestamps 日历把 SHA-256 摘要锚定到比特币；你会得到标准的 .ots 证明。",
-    c6:"用 EMPORION 直接从比特币网络获取的区块头链验证证明：已检查工作量证明，两个节点一致。",
+    c6:"用 SYMMARTYS 直接从比特币网络获取的区块头链验证证明：已检查工作量证明，两个节点一致。",
     c7:"每个来源的许可与署名，以及当前已加载的制裁名单。",
     c8:"把网页作为证据：最终 URL、重定向、IP、TLS 证书和正文的 SHA-256——记录锚定到比特币。",
     c9:"这个域名是谁、何时注册的：注册天数、注册商、状态——来自该顶级域自己的注册局。",
@@ -183,19 +183,19 @@ const I18N = {
     t4_t:"诚实的拒绝", t4_d:"超过 48 小时的制裁名单或没有回应的登记处都是不收费的拒绝——绝不会给出空洞的「未列入」。",
     call_h2:"调用", call_lead:"通过枢纽调用（每小时五次免费试用），或从仓库运行你自己的副本。",
     limits_h2:"诚实的限制",
-    l1:"VIES 给出的是成员国登记处当时的回答；有些国家不返回名称或地址。EMPORION 不存储任何内容。",
+    l1:"VIES 给出的是成员国登记处当时的回答；有些国家不返回名称或地址。SYMMARTYS 不存储任何内容。",
     l2:"GLEIF 只覆盖拥有 LEI 的实体——许多小公司没有。",
     l3:"参考汇率仅供参考，不用于交易。",
     l4:"制裁筛查是在三份公共名单中查询，不是法律意见，也不是合规方案。",
     l5:"时间戳证明文件最迟在某个区块的时间已经存在，但不证明作者身份。",
-    foot_eco:"EMPORION · AICOM / AIMarket 生态系统 · MIT", foot_changes:"更新日志",
+    foot_eco:"SYMMARTYS · AICOM / AIMarket 生态系统 · MIT", foot_changes:"历史更新（0.4.2）",
     scene_live:"实时：服务当前持有的制裁名单", scene_sim:"示意图：在线服务此刻未提供名单",
   },
 };
 const SUP = ["en", "ru", "es", "fr", "zh"];
 let lang = "en";
 try {
-  const saved = localStorage.getItem("emporion-landing-lang");
+  const saved = localStorage.getItem("symmartys-landing-lang");
   if (saved && SUP.includes(saved)) lang = saved;
   else { const n = (navigator.language || "en").slice(0, 2).toLowerCase(); if (SUP.includes(n)) lang = n; }
 } catch (_) {}
@@ -210,10 +210,10 @@ function applyLang() {
 function setLang(l) {
   if (!SUP.includes(l)) return;
   lang = l;
-  try { localStorage.setItem("emporion-landing-lang", l); } catch (_) {}
+  try { localStorage.setItem("symmartys-landing-lang", l); } catch (_) {}
   applyLang();
 }
 document.querySelectorAll(".langsw button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 
-window.emporionApplyLang = applyLang;
+window.symmartysApplyLang = applyLang;
 applyLang();

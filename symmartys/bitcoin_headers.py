@@ -1,10 +1,10 @@
 """Bitcoin block headers straight from the Bitcoin network — no explorer, no API terms.
 
 timestamp.verify needs one thing from Bitcoin: the header of the block an OpenTimestamps
-proof lands in, to compare the proof's result with that header's Merkle root. EMPORION used
+proof lands in, to compare the proof's result with that header's Merkle root. SYMMARTYS used
 to ask two block explorers for it; their public APIs are free but rate-limited, without
 terms for business use. The header chain itself is public consensus data that any Bitcoin
-node serves to anyone, so EMPORION keeps its own copy:
+node serves to anyone, so SYMMARTYS keeps its own copy:
 
 * It speaks the Bitcoin P2P protocol to nodes found through the DNS seeds (TCP 8333), asks
   for headers (getheaders), and keeps every header from the genesis block on in one file in
@@ -36,14 +36,14 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from emporion.net import UpstreamError
+from symmartys.net import UpstreamError
 
-log = logging.getLogger("emporion.bitcoin_headers")
+log = logging.getLogger("symmartys.bitcoin_headers")
 
 MAGIC = bytes.fromhex("f9beb4d9")
 PORT = 8333
 PROTOCOL_VERSION = 70016
-USER_AGENT = b"/EMPORION:0.3/"
+USER_AGENT = b"/SYMMARTYS:0.3/"
 GENESIS = bytes.fromhex(
     "0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27a"
     "c72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c")
@@ -181,10 +181,10 @@ class HeaderChain:
                     fork = self.height - back
                     break
             if fork is None:
-                raise InvalidChain("the headers do not join the chain EMPORION holds")
+                raise InvalidChain("the headers do not join the chain SYMMARTYS holds")
             new_tip = fork + len(headers)
             if new_tip <= self.height:
-                # Either headers EMPORION already has (a node behind or level) or a shorter
+                # Either headers SYMMARTYS already has (a node behind or level) or a shorter
                 # branch: both leave the chain as it is.
                 return 0
             saved = bytes(self.raw[(fork + 1 - self.base) * 80:])
@@ -532,7 +532,7 @@ class HeaderService:
                     wait = 60
                 time.sleep(wait)
 
-        self._thread = threading.Thread(target=loop, name="emporion-btc-headers", daemon=True)
+        self._thread = threading.Thread(target=loop, name="symmartys-btc-headers", daemon=True)
         self._thread.start()
 
     def status(self) -> dict[str, Any]:

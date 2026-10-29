@@ -1,6 +1,6 @@
 name: Publish to GHCR
 
-# Docker image: ghcr.io/alexar76/emporion:<tag>
+# Image names follow github.repository only when publication is separately authorized.
 # Triggered when a GitHub Release is published, or via workflow_dispatch.
 
 on:

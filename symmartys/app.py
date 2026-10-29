@@ -1,16 +1,16 @@
-"""EMPORION FastAPI app — oracle-core surface, provider signatures, health and an index."""
+"""SYMMARTYS FastAPI app — oracle-core surface, provider signatures, health and an index."""
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from fastapi import FastAPI
 from oracle_core import create_app
 
-from emporion import __version__
-from emporion.capabilities import Runtime, build_spec
-from emporion.middleware import ProviderSignatureMiddleware
+from symmartys import __version__
+from symmartys.capabilities import Runtime, build_spec
+from symmartys.middleware import ProviderSignatureMiddleware
+from symmartys.config import setting
 
 
 def build_app(runtime: Runtime | None = None, public_url: str | None = None) -> FastAPI:
@@ -25,7 +25,7 @@ def build_app(runtime: Runtime | None = None, public_url: str | None = None) -> 
         @app.get("/health")
         async def health() -> dict[str, Any]:
             lists = runtime.sanctions.status()["lists"]
-            return {"status": "ok", "service": "emporion", "version": __version__,
+            return {"status": "ok", "service": "symmartys", "version": __version__,
                     "capabilities": len(spec.capabilities),
                     "sanctions_lists_loaded": sorted(k for k, v in lists.items() if v)}
 
@@ -37,11 +37,11 @@ def build_app(runtime: Runtime | None = None, public_url: str | None = None) -> 
                 "invoke": f"{spec.public_url.rstrip('/')}/ai-market/v2/invoke",
                 "capabilities": [{"id": c.capability_id, "price_usd": c.price_per_call_usd}
                                  for c in spec.capabilities],
-                "docs": "https://github.com/alexar76/emporion",
+                "docs": "https://modelmarket.dev/",
             }
 
-    app = create_app(spec, cors_origins=os.environ.get("EMPORION_CORS_ORIGINS", ""),
-                     invoke_rate_limit=int(os.environ.get("EMPORION_RATE_LIMIT", "120")),
+    app = create_app(spec, cors_origins=setting("CORS_ORIGINS"),
+                     invoke_rate_limit=int(setting("RATE_LIMIT", "120")),
                      extra=extra)
     app.add_middleware(ProviderSignatureMiddleware, signer=app.state.protocol.signer)
     # Timer deliveries are signed with the same key the manifest names.

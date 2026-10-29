@@ -26,7 +26,7 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install oracle-core + emporion
+      - name: Install oracle-core + symmartys
         run: |
           python -m pip install --upgrade pip
           if [[ -d vendor/oracle-core ]]; then
@@ -40,7 +40,7 @@ jobs:
       - name: Pytest + coverage
         run: |
           python -m pytest tests/ -q --tb=short --maxfail=5 \
-            --cov=emporion --cov-report=term-missing --cov-report=json:coverage.json
+            --cov=symmartys --cov-report=term-missing --cov-report=json:coverage.json
           python3 scripts/generate_coverage_badge.py coverage.json docs/badges/coverage.svg
           python3 scripts/generate_tests_badge.py --rootdir . --out docs/badges/tests.json
           echo "Coverage: $(grep -oE '[0-9]+%' docs/badges/coverage.svg | tail -1)"
@@ -56,11 +56,11 @@ jobs:
         run: |
           # The mirror vendors oracle-core here; without it the image cannot build.
           test -f vendor/oracle-core/pyproject.toml || { echo "::error::vendor/oracle-core is missing"; exit 1; }
-          docker build -f Dockerfile.standalone -t emporion:ci .
+          docker build -f Dockerfile.standalone -t symmartys:ci .
 
       - name: It starts and answers its manifest
         run: |
-          docker run -d --name emporion-ci -p 127.0.0.1:9351:9351 emporion:ci
+          docker run -d --name symmartys-ci -p 127.0.0.1:9351:9351 symmartys:ci
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:9351/health && break
             sleep 2
@@ -69,5 +69,5 @@ jobs:
           curl -sf -o manifest.json http://127.0.0.1:9351/ai-market/v2/manifest
           # The manifest lists exactly what the running app serves, signed; no capability count is
           # written here, so adding one does not turn CI red (a hard-coded 7 did, at 0.2.0).
-          python3 -c "import json; h=json.load(open('health.json')); m=json.load(open('manifest.json')); ids={t['capability_id'] for t in m['tools']}; assert len(ids) == h['capabilities'] == len(m['tools']), (len(ids), h['capabilities']); assert m['signature'], 'unsigned manifest'; assert {'emporion.vat.check@v1', 'emporion.sources@v1'} <= ids, ids; print(f'manifest: {len(ids)} capabilities, signed')"
-          docker rm -f emporion-ci
+          python3 -c "import json; h=json.load(open('health.json')); m=json.load(open('manifest.json')); ids={t['capability_id'] for t in m['tools']}; assert len(ids) == h['capabilities'] == len(m['tools']), (len(ids), h['capabilities']); assert m['signature'], 'unsigned manifest'; assert {'symmartys.vat.check@v1', 'symmartys.sources@v1'} <= ids, ids; print(f'manifest: {len(ids)} capabilities, signed')"
+          docker rm -f symmartys-ci

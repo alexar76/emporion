@@ -148,7 +148,7 @@ def check(*, country: str | None = None, market: str | None = None, subdiv: str 
                            for k, v in sorted(yc.items()) if k.year == y]
     out["evidence"] = {"source": f"python-holidays {holidays.__version__}",
                        "licence": "MIT", "url": "https://github.com/vacanza/holidays",
-                       "note": "compiled into EMPORION; a holiday declared after this "
+                       "note": "compiled into SYMMARTYS; a holiday declared after this "
                                "release is not in it"}
     return out
 

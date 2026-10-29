@@ -1,24 +1,24 @@
 """Timers for agents: a signed call at a time, and a dead man's switch.
 
 An agent runs when something calls it. It cannot wake itself in three days to check
-that a delivery arrived, or notice that it has itself stopped. EMPORION can:
+that a delivery arrived, or notice that it has itself stopped. SYMMARTYS can:
 
     once      at a time (or after N seconds), POST the caller's payload to its callback.
     deadman   every check-in pushes the deadline N seconds ahead; when the agent misses
               it, POST the payload — "I am down: release the escrow, page my owner".
 
 Each delivery is a JSON POST of {"event": …, "signature": …}: the event (timer id, kind,
-due and fired times, attempt, the caller's payload) signed with EMPORION's own key —
+due and fired times, attempt, the caller's payload) signed with SYMMARTYS's own key —
 Ed25519 and, when on, ML-DSA-65 — over the event as JSON with sorted keys and compact
-separators, so a receiver can tell it came from EMPORION and was not replayed for
-another timer. The public key is the one in EMPORION's signed manifest.
+separators, so a receiver can tell it came from SYMMARTYS and was not replayed for
+another timer. The public key is the one in SYMMARTYS's signed manifest.
 
 Setting a timer returns its id and a token, once; the token (stored only as SHA-256) is
 what checks in, cancels and reads the status. A callback is https on port 443 to a public
 address, checked when the timer is set and again at every delivery (the address it
 resolves to then is the one connected to). A delivery that does not get a 2xx is
 retried after 1, 5 and 30 minutes, then the timer is marked failed. Timers live at most
-MAX_LIFETIME_DAYS. All of it sits in one SQLite file in EMPORION's data volume.
+MAX_LIFETIME_DAYS. All of it sits in one SQLite file in SYMMARTYS's data volume.
 """
 
 from __future__ import annotations
@@ -34,10 +34,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from emporion import capture
-from emporion.net import USER_AGENT, UpstreamError
+from symmartys import capture
+from symmartys.net import USER_AGENT, UpstreamError
 
-log = logging.getLogger("emporion.timers")
+log = logging.getLogger("symmartys.timers")
 
 MAX_LIFETIME_DAYS = 90
 MIN_DELAY_S = 60
@@ -153,7 +153,7 @@ class TimerService:
         with self.lock:
             armed = self.db.execute("SELECT COUNT(*) FROM timers WHERE state='armed'").fetchone()[0]
             if armed >= MAX_ARMED:
-                raise UpstreamError("EMPORION holds as many timers as it will; nothing charged, "
+                raise UpstreamError("SYMMARTYS holds as many timers as it will; nothing charged, "
                                     "retry later")
             per_host = self.db.execute(
                 "SELECT COUNT(*) FROM timers WHERE state='armed' AND callback_host=?",
@@ -169,10 +169,10 @@ class TimerService:
         out = {"timer_id": timer_id, "token": token, "kind": kind, "callback": callback.strip(),
                "due_at": _iso(due), "expires_at": _iso(expires),
                "note": "keep the token: it alone checks in, cancels and reads this timer, and "
-                       "EMPORION cannot show it again"}
+                       "SYMMARTYS cannot show it again"}
         if kind == "deadman":
             out["deadman_seconds"] = interval
-            out["next"] = ("call emporion.timer.checkin@v1 with timer_id and token before "
+            out["next"] = ("call symmartys.timer.checkin@v1 with timer_id and token before "
                            "due_at; each check-in moves due_at deadman_seconds ahead")
         return out
 
@@ -229,14 +229,14 @@ class TimerService:
     def _deliver(self, row: sqlite3.Row, now: float) -> tuple[bool, int | None, str | None]:
         event = {"timer_id": row["id"], "kind": row["kind"], "due_at": _iso(row["due_at"]),
                  "fired_at": _iso(now), "attempt": row["attempts"] + 1,
-                 "payload": json.loads(row["payload"]), "issuer": "emporion"}
+                 "payload": json.loads(row["payload"]), "issuer": "symmartys"}
         signature = self.signer.sign_payload(event_canonical(event)) if self.signer else None
         body = json.dumps({"event": event, "signature": signature}, ensure_ascii=False).encode()
         try:
             scheme, host, port = capture.check_url(row["callback"])
             ip = capture.pin_address(host, port)
             headers = {"User-Agent": f"{USER_AGENT} timer", "Content-Type": "application/json",
-                       "X-Emporion-Timer": row["id"]}
+                       "X-Symmartys-Timer": row["id"]}
             with capture.open_pinned(row["callback"], ip, host, headers, DELIVERY_TIMEOUT_S,
                                      method="POST", content=body) as resp:
                 status = resp.status_code
@@ -295,7 +295,7 @@ class TimerService:
                 except Exception:  # noqa: BLE001 — keep the clock running
                     log.exception("timer tick failed")
 
-        self._thread = threading.Thread(target=loop, name="emporion-timers", daemon=True)
+        self._thread = threading.Thread(target=loop, name="symmartys-timers", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:

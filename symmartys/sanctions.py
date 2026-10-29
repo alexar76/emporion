@@ -45,10 +45,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from emporion.names import norm_name, score, tokens
-from emporion.net import Fetched, UpstreamError, fetch
+from symmartys.names import norm_name, score, tokens
+from symmartys.net import Fetched, UpstreamError, fetch
 
-log = logging.getLogger("emporion.sanctions")
+log = logging.getLogger("symmartys.sanctions")
 
 OFAC_SDN = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV"
 OFAC_ALT = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ALT.CSV"
@@ -60,7 +60,7 @@ EU_FSF = ("https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsLis
 UK_XML = "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml"
 
 LISTS = ("OFAC-SDN", "EU", "UK")
-#: Not a list EMPORION reads: the UK and EU entries that carry a UN reference number.
+#: Not a list SYMMARTYS reads: the UK and EU entries that carry a UN reference number.
 UN_VIEW = "UN"
 REFRESH_S = 6 * 3600
 #: How soon a missing or failed list is tried again. The EU file server answered 500 for
@@ -400,7 +400,7 @@ class SanctionsService:
     def status(self) -> dict[str, Any]:
         """The lists a screen uses right now — the index, not what was fetched and is still
         being indexed. Reading the fetched snapshots made /health say all three were loaded
-        while every screen still refused, and during a refresh made emporion.sources@v1 show
+        while every screen still refused, and during a refresh made symmartys.sources@v1 show
         the new lists' dates and hashes while screens answered from the old ones."""
         with self._lock:
             index = self._index

@@ -1,6 +1,6 @@
 name: Pages — landing
 
-# Publish docs/landing/ → https://alexar76.github.io/emporion/
+# Legacy workflow template for docs/landing. This local rename publishes nothing.
 on:
   push:
     branches: [main]
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pages-emporion
+  group: pages-symmartys
   cancel-in-progress: true
 
 jobs:

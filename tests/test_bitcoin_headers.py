@@ -1,4 +1,4 @@
-"""EMPORION's own Bitcoin header chain, on real mainnet headers, without the network."""
+"""SYMMARTYS's own Bitcoin header chain, on real mainnet headers, without the network."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ import struct
 import pytest
 
 from conftest import FIX
-from emporion import bitcoin_headers as bh
-from emporion.bitcoin_headers import (GENESIS, GENESIS_HASH, HeaderChain, HeaderService,
+from symmartys import bitcoin_headers as bh
+from symmartys.bitcoin_headers import (GENESIS, GENESIS_HASH, HeaderChain, HeaderService,
                                       InvalidChain, bits_to_target, block_hash,
                                       parse_headers, target_to_bits)
-from emporion.net import UpstreamError
+from symmartys.net import UpstreamError
 
 FIRST_100 = (FIX / "btc_headers_0_100.bin").read_bytes()
 RETARGET = (FIX / "btc_headers_30240_32300.bin").read_bytes()  # the first difficulty change

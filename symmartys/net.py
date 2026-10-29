@@ -1,4 +1,4 @@
-"""Outbound HTTP for EMPORION: allowlisted hosts, checked redirects, size caps, evidence.
+"""Outbound HTTP for SYMMARTYS: allowlisted hosts, checked redirects, size caps, evidence.
 
 Every fetch returns the body together with what a buyer needs to trust the answer was
 built from it: the final URL, the time it was fetched and the SHA-256 of the bytes.
@@ -13,9 +13,9 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from emporion.sources import ALLOWED_HOSTS, DYNAMIC_HOSTS, source
+from symmartys.sources import ALLOWED_HOSTS, DYNAMIC_HOSTS, source
 
-USER_AGENT = "EMPORION/0.1 (+https://github.com/alexar76/emporion; contact@modelmarket.dev)"
+USER_AGENT = "SYMMARTYS/0.5 (+https://modelmarket.dev/; contact@modelmarket.dev)"
 RETRIES = 3
 MAX_REDIRECTS = 3
 

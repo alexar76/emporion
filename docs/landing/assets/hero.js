@@ -17,7 +17,7 @@ function onLive(held) {
   detail.textContent = names.length
     ? " · " + names.map((n) => `${n} ${held[n].entries.toLocaleString("en-US")}`).join(" · ")
     : "";
-  if (typeof window.emporionApplyLang === "function") window.emporionApplyLang();
+  if (typeof window.symmartysApplyLang === "function") window.symmartysApplyLang();
 }
 
 // After the page has loaded and painted: creating the WebGL context and compiling the glow's

@@ -1,7 +1,7 @@
 """National company registers: is this company real, alive, and who is it.
 
 GLEIF knows the ~3 million entities that have an LEI; a small supplier usually has none.
-A national register knows every company of its country. EMPORION asks the registers
+A national register knows every company of its country. SYMMARTYS asks the registers
 that publish openly, without a key, under an open licence:
 
     NO  Brønnøysund Register Centre (Enhetsregisteret), NLOD 2.0
@@ -27,7 +27,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from emporion.net import Fetched, UpstreamError, fetch
+from symmartys.net import Fetched, UpstreamError, fetch
 
 BRREG = "https://data.brreg.no/enhetsregisteret/api/enheter"
 FR_SEARCH = "https://recherche-entreprises.api.gouv.fr/search"
@@ -44,14 +44,14 @@ _KEYED = {"GB": "COMPANIES_HOUSE_API_KEY"}
 PERSONAL_DATA = {
     "purpose": "verifying a counterparty before a transaction",
     "lawful_basis": "legitimate interest, GDPR Art. 6(1)(f), for the caller who asks",
-    "retention": "EMPORION keeps no copy of the answer; the call log holds only a hash of "
+    "retention": "SYMMARTYS keeps no copy of the answer; the call log holds only a hash of "
                  "the input",
     "note": "entries for sole traders are personal data: use them for this purpose only",
 }
 
 
 def available() -> list[str]:
-    """The registers this EMPORION can ask now: the open ones, and keyed ones with a key."""
+    """The registers this SYMMARTYS can ask now: the open ones, and keyed ones with a key."""
     return [cc for cc in COUNTRIES if cc not in _KEYED or os.environ.get(_KEYED[cc])]
 
 
@@ -312,7 +312,7 @@ _CH_NUMBER = re.compile(r"^(?:[A-Z]{2}\d{6}|\d{1,8})$")
 def _ch_headers() -> dict[str, str]:
     key = os.environ.get("COMPANIES_HOUSE_API_KEY", "")
     if not key:
-        raise ValueError("GB needs the operator's Companies House API key, and this EMPORION "
+        raise ValueError("GB needs the operator's Companies House API key, and this SYMMARTYS "
                          "has none; nothing charged")
     # HTTP Basic with the key as the user name and no password (Companies House's scheme).
     token = base64.b64encode(f"{key}:".encode()).decode()
@@ -374,7 +374,7 @@ def lookup(country: str, *, number: str | None = None, name: str | None = None,
     if cc not in COUNTRIES:
         raise ValueError(f"no open company register for {cc or '?'} yet; known: "
                          f"{', '.join(available())} (and every LEI holder via "
-                         "emporion.lei.lookup@v1)")
+                         "symmartys.lei.lookup@v1)")
     if not number and not (name and len(str(name).strip()) >= 2):
         raise ValueError("give number, or a name of at least 2 characters")
     limit = max(1, min(int(limit or 5), 10))

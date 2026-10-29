@@ -4,7 +4,7 @@ An agent buying from or selling to an EU business needs to know whether the othe
 VAT number is valid today — reverse charge, invoices and OSS returns depend on it. VIES
 answers from the member state's own registry. When the caller gives its OWN VAT number
 as requester, VIES issues a consultation number: the official proof, in the caller's
-name, that the check was made at that moment. EMPORION passes it through untouched and
+name, that the check was made at that moment. SYMMARTYS passes it through untouched and
 keeps nothing.
 
 "Invalid" is an answer (the buyer learned something, and pays for it). A member state
@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from emporion.net import UpstreamError, fetch
+from symmartys.net import UpstreamError, fetch
 
 CHECK_URL = "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number"
 

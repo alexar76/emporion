@@ -1,9 +1,9 @@
-# aimarket-emporion. Unprefixed short names on PyPI are claimable by strangers
+# aimarket-symmartys. Unprefixed short names on PyPI are claimable by strangers
 # (see oracles/core/pyproject.toml). Distribution name is always aimarket-*.
 [project]
-name = "aimarket-emporion"
-version = "0.4.2"
-description = "EMPORION — public-record facts for agents that trade: EU VAT validity (VIES), legal entities (GLEIF LEI), national company registers, EORI, domain registrations (RDAP), ECB reference rates, sanctions-list lookups (OFAC, EU, UN), business-day calendars, Bitcoin-anchored timestamps (OpenTimestamps), web pages captured as evidence and timers with a dead man's switch, each answer signed with its sources"
+name = "aimarket-symmartys"
+version = "0.5.0"
+description = "SYMMARTYS — public-record facts for agents that trade: EU VAT validity (VIES), legal entities (GLEIF LEI), national company registers, EORI, domain registrations (RDAP), ECB reference rates, sanctions-list lookups (OFAC, EU, UN), business-day calendars, Bitcoin-anchored timestamps (OpenTimestamps), web pages captured as evidence and timers with a dead man's switch, each answer signed with its sources"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -15,7 +15,7 @@ dependencies = [
     # XML of the EU and UN sanctions lists comes from outside: parse it defused.
     "defusedxml>=0.7.1",
     # The OpenTimestamps reference library (LGPL-3.0) for proof (de)serialisation and
-    # operations; EMPORION does its own HTTP to calendars and explorers (allowlisted).
+    # operations; SYMMARTYS does its own HTTP to calendars and explorers (allowlisted).
     "opentimestamps>=0.4.5,<0.5",
     # Public holidays and market calendars, compiled in (MIT): no network at answer time.
     "holidays>=0.106,<1",
@@ -30,17 +30,24 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://emporion.modelmarket.dev/"
-Source = "https://github.com/alexar76/emporion"
-Changelog = "https://github.com/alexar76/emporion/blob/main/CHANGELOG.md"
-"Landing on GitHub Pages" = "https://alexar76.github.io/emporion/"
+Homepage = "https://modelmarket.dev/"
+"Legacy source (through 0.4.2)" = "https://github.com/alexar76/emporion"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["emporion"]
+packages = ["symmartys"]
+
+# Explicit source allowlist: no writable state, signing keys, environments or build output.
+[tool.hatch.build.targets.sdist]
+include = [
+    "/symmartys", "/tests", "/docs", "/scripts", "/README*.md", "/CHANGELOG.md",
+    "/MIGRATION.md", "/SECURITY.md", "/CONTRIBUTING.md", "/LICENSE", "/pyproject.toml",
+    "/Dockerfile", "/Dockerfile.standalone", "/docker-compose.yml",
+]
+exclude = ["/.gitignore", "**/__pycache__", "**/*.pyc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
